@@ -1,0 +1,1395 @@
+% Master File: it.tex
+
+\sloppy
+
+
+
+
+
+
+
+% -*- Mode: Text -*-
+\chapter{Refinement Rules}
+
+\label{Rules}
+	
+The\index{inference rules}{}\index{proof rules}{}
+\index{rules of proof}{} \nuprl{} system has been designed to accommodate the
+top-down\index{top-down construction}{} construction of proofs by
+refinement.
+In this style one proves a judgement (i.e., a {\em goal}) by applying
+a {\em refinement\index{refinement}{} rule}, thereby obtaining a set of
+judgements called {\em subgoals},
+and then proving each of the subgoals.
+In this section we will describe the refinement rules themselves.
+First we give some general comments regarding the rules and then proceed to
+give a description of each rule.
+
+\section{The Form of a Rule}
+To accommodate the top-down style of the \nuprl{} system the
+rules of the logic are presented in the following
+{\em refinement} style.
+\begin{quote}
+\goal $H$ >> $T$ ext $t$ by $rule$ \\*
+\subgoal $H_1$ >> $T_1$ ext $t_1$ \\*
+\mbox{\qquad\qquad $\left.\vdots\right.$} \\*
+\subgoal $H_k$ >> $T_k$ ext $t_k$
+\end{quote}
+The goal is shown at the top, and each subgoal is shown
+indented underneath.
+The rules are defined so that if every subgoal is true then one can show the
+truth of the goal (see Section 8.1 of the book for an explanation of
+truth of judgments and sequents).
+If there are no subgoals ($k=0$) then the truth of the goal is axiomatic.
+
+One of the features of the proof\index{proof editor}{} editor is that
+the extraction terms are not
+displayed and indeed are not immediately available.
+The idea is that one can judge a term $T$ to be a type and  $T$ to be
+inhabited without explicitly presenting the inhabiting object.
+When one is viewing $T$ as a proposition this is convenient, as a
+proposition is true if it is inhabited.
+If $T$ is being viewed as a specification this allows one to
+implicitly
+build a program which is guaranteed to be correct for the specification.
+The extraction term for a goal is built as a function of the extraction
+terms of the subgoals and thus in general cannot be built until each of
+the subgoals have been proved.
+If one has a specific term, $t$, in mind as the inhabiting object and wants
+it displayed, one can use the explicit intro rule and then show that the
+type {\tt $t$ in $T$} is inhabited.
+\index{inhabitation}{}
+The rules have the property that each subgoal can be constructed from the
+information in the rule and from the goal, exclusive of the extraction term.
+As a result some of the more complicated rules require certain terms as
+parameters.
+
+Implicit in showing a judgement to be true is showing that the conclusion of
+the judgement is in fact a type.
+We cannot directly judge a term to be a type; rather, we show that it
+inhabits a universe.
+An examination of the semantic definition will reveal that this is
+sufficient for our purposes.
+Due to the rich type structure of the system it is not possible in general
+to decide algorithmically if a given term denotes an element of a universe,
+so this is something which will require proof.
+The logic has been arranged so the proof that the conclusion of a goal
+is a type can be conducted simultaneously with the proof that the type is
+inhabited.
+In many cases this causes no great overhead,
+but some rules have subgoals whose only purpose is to establish that the
+goal is a type, that is, that it is {\em well-formed}\index{well-formedness}{}.
+These subgoals all have the form {\tt $H$ >> $T$ in \U{i}} and are referred
+to as {\em well-formedness\index{well-formedness subgoals}{}} subgoals.
+
+\section{Organization of the Rules}
+The rules for reasoning about each type and objects of the type will be
+presented in separate sections.
+Recall from above that for each judgement of the form
+\mbox{\tt $H$ >> $T$ ext $t$} where the inhabiting object $t$ is left
+implicit\index{implicit term construction}{}, there is a corresponding
+explicit judgement
+\mbox{\tt $H$ >> $t$ in $T$ ext axiom}.
+As the content of these judgements is essentially the same,
+the rules for reasoning about them will be presented together.
+
+For each type we will have the following
+categories\index{rule categories}{} of rules:
+\begin{itemize}
+\item{\em Formation\index{formation rules}{}}\\
+These rules give the conditions under which a canonical type may be judged to
+inhabit a universe, thus verifying that it is indeed a type.
+\item{\em Canonical\index{canonical rules}{}}\\
+These rules give the conditions under which a canonical object
+(implicitly or explicitly presented)
+may be judged to inhabit a canonical type.
+Note that the formation rules are all actually canonical rules, but it is
+convenient to separate them.
+\item{\em Noncanonical\index{noncanonical rules}{}}\\
+These rules give the conditions under which a noncanonical object may be
+judged to inhabit a type.  The elimination rules all fall in this category,
+as the extract term for an elimination rule is a noncanonical term.
+\item{\em Equality\index{equality rules}{}}\\
+These rules give the conditions under which objects having the same outer
+form may be judged to be equal.
+Recall that the rules are being presented in implicit/explicit pairs,
+\mbox{\tt $H$ >> $T$ ext $t$} and \mbox{\tt $H$ >> $t$ in $T$}.
+The explicit judgement \mbox{\tt $H$ >> $t$ in $T$} is simply
+the reflexive instance of the general equality judgement
+\mbox{\tt $H$ >> $t$ = $t'$ in $T$}, and in most cases the rule for the
+general form is an obvious generalization of the rule for the reflexive
+form, and thus will be omitted.  
+As the rules for the reflexive judgement are given in one of the other
+categories, there will be no equality rules presented for some types.
+\item{\em Computation\index{computation rules}{}}\\
+These rules allow one to make judgements of equalities resulting from
+computation.
+\end{itemize}
+
+Rules such as the {\em sequence}, {\em hypothesis} and {\em lemma} rules
+which are not associated with one particular type are grouped together under
+the heading ``miscellaneous''.
+
+\section{Specifying a Rule}
+In the context of a particular goal a rule is specified by giving a name
+and, possibly, certain parameters.
+As there are a large number of rules 
+it would be unfortunate to have to remember a unique name for each one.
+Instead, there are small number of generic names, and the
+proof\index{proof editor}{} editor
+infers the specific rule desired from the form of the goal.
+In fact, for the rules dealing with specific types or objects of specific
+types, there are only the names {\em intro}, {\em elim} and {\em reduce}.
+The {\em intro}\index{\tt intro}{} rules are those which break down the conclusion of the goal,
+and the {\em elim}\index{\tt elim}{} rules are those which use a hypothesis.
+Accordingly, the first parameter of any elim rule is the declared variable
+or number of the hypothesis to be used.
+The {\em reduce}\index{\tt reduce}{} rules are the computation rules.
+The first parameter of a reduce rule is a number that specifies which 
+term of the equality is to be reduced.
+Among the parameters \index{rule parameters}{}of some rules are keyword
+parameters which have the following form:
+\begin{itemize}
+\item{\tt new\index{\tt new}{} $x_1,\cdots,x_n$}\\
+This parameter is used to give new\index{new clause}{} names for hypotheses
+in the subgoals.
+In most cases the defaults, which are derived from subterms of the conclusion
+of the goal, suffice.
+For technical reasons the same variable can be declared at most once in a
+hypothesis list, so if a default name is already declared a new name will
+have to be given.
+Whenever this parameter is used it must be the case that the names given
+are all distinct and do not occur in the hypothesis list of the goal.
+\item{\tt using $T$\index{\tt using}{}}, {\tt over $z.T$\index{\tt over}{}} \\
+These parameters are used when judging the equality of
+noncanonical\index{noncanonical terms}{} forms in
+types dependent on the principal argument of the noncanonical form.
+The {\tt using} parameter  specifies the type of the principal argument 
+of the noncanonical form.
+The value should be a canonical type which is appropriate for the
+particular noncanonical form.
+The {\tt over}\index{\tt over}{} parameter specifies the dependence of the
+type over which the
+equality is being judged on the principal argument of the form.
+Each occurrence of $z$ in $T$ indicates such a dependency.
+The proof editor always checks that the term obtained by substituting the
+principal argument for $z$ in $T$ is
+$\alpha$-convertible\index{$\alpha$-convertible}{}
+to the type of the equality judgement.
+\item{\tt at $\Ui$}\\
+The value of this parameter is the universe level at which any type judgements
+in the subgoals are to be made.  The default is $\U{1}$.
+\end{itemize}
+
+\section{Optional Parameters and Defaults}
+Each rule will be presented in its most general form.
+However, some of the parameters of a rule may be optional,
+in which case they will be enclosed by square brackets ({\tt []}).
+If a new hypothesis in a subgoal depends on an optional parameter,
+and in a particular instance of the rule the optional parameter is not
+given, that new hypothesis will not be added.
+Such a  dependence is usually in the form of a hypothesis specifically
+referring to an optional {\tt new} name.
+The {\tt over} parameter discussed above is almost always optional.
+If it is not given, it is assumed that the type of the equality has no
+dependence on the principal argument of the noncanonical form.
+
+The issue of default values for variable names arises when the main term 
+of a goal's conclusion contains binding variables.
+In general, the default values are taken to be those binding variables.
+For example, the rule for explicitly showing a product to be in a universe
+is
+\begin{quote}
+\goal $H$ >> $x$:$A$\#$B$ in \U{i} by intro [new y] \\
+\subgoal >> $A$ in \U{i} \\
+\subgoal $y$:$A$ >> $B$ in \U{i}
+\end{quote}
+The rule is presented as if a new name is given, but the default is to 
+use $x$.  All the dependent types follow this general pattern.
+
+For judging the equality of terms containing binding variables the binding
+variables of the first term are in general the default values for the
+``appropriate'' new hypotheses.  Consider the rule (slightly
+simplified)
+for showing that a
+spread term is in a type:
+\begin{quote}
+\goal $H$ >> spread($e$;$x,y.t$) in \mysubst{$T$}{$z$}{$e$} \\
+\continuegoal by intro [over $z.T$] using $w$:$A$\#$B$ [new $u,v$] \\
+\subgoal $H$ >> $e$ in $w$:$A$\#$B$ \\
+\subgoal $H$,$u$:$A$,$v$:\mysubst{$B$}{$w$}{$u$} >>
+            \mysubst{$t$}{$x,y$}{$u,v$} in \mysubst{$T$}{$z$}{<$u$,$v$>}
+\end{quote}
+Here the new variables default to $x,y$.  If no new names are given and
+$x$ and $y$ don't appear in $H$, then the second subgoal will be
+\begin{quote}
+\tt\subgoal $H$,$x$:$A$,$y$:$B$ >> $t$ in \mysubst{$T$}{$z$}{<$x$,$y$>}
+\end{quote}
+Again this is the general pattern for rules of this type.
+
+\section{Hidden Assumptions}
+For certain rules, we need to be able to control the free variables occuring
+in the extract term.
+The mechanism used to achieve this is that of {\em hidden} hypotheses.
+A hypothesis is hidden when it is displayed enclosed in square brackets.
+At the moment the only place where such hypotheses are added is in a subgoal
+of the set\index{set rules}{} elim rule.
+The intended meaning of a hypothesis being hidden is that the name of the
+hypothesis cannot appear free in the extracted term; that is, that it cannot
+be used computationally.
+Accordingly, a hidden hypothesis cannot be the object of an {\tt elim} or 
+{\tt hyp} rule.
+For the rules for which the extract term is the trivial term {\tt
+axiom}, the extract term contains no free variable references
+and so all restrictions on the use of
+hidden\index{hidden hypotheses}{} hypotheses can be removed.
+The editor will remove the brackets from any hidden hypotheses
+in displaying a goal of this form.
+
+\section{Shortcuts in the Presentation}
+
+Several conventions are used to simplify the presentation of the rules.
+\begin{itemize}
+\item
+Almost all of the rules have the property that the list of hypotheses in a
+subgoal is an extension of the hypothesis list of the goal.  For such
+rules, we will show
+only the new hypotheses in the subgoals.
+\item Trivial extraction terms (that is, those that are just {\tt axiom}.) 
+will not be exhibited.
+\item
+The computation rules take an integer $i$ as their first parameter.  The
+conclusion must be of the form \mbox{\tt $t_1$=\ldots=$t_k$ in $T$} and $i$
+is taken to refer to $t_i$ (so $1 \le i \le k$).  The rule we present only
+deals with the case $i=1$ and $k=2$, but the rule will apply for any $k\ge
+1$ and $i$, with the obvious changes being made.
+\end{itemize}
+
+
+
+
+\section{Atom}\index{atom rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext atom by intro atom 
+
+\goal $H$ >> atom in \U{i}  by intro
+
+\subsection*{canonical}
+\goal $H$ >> atom ext \verb+"+$\cdots$\verb+"+ by intro \verb+"+$\cdots$\verb+"+
+
+\goal $H$ >> \verb+"+$\cdots$\verb+"+ in atom by intro
+\begin{quote}\rm
+where `$\cdots$' is any sequence of prl characters.
+
+
+\end{quote}
+
+\goalskip
+
+\goal $H$ >> atom\_eq($a$;$b$;$t$;$t'$) in $T$ by intro \\*
+\subgoal >> $a$ in atom \\*
+\subgoal >> $b$ in atom \\*
+\subgoal $a$=$b$ in atom >> $t$ in $T$ \\*
+\subgoal  ($a$=$b$ in atom)->void >> $t'$ in $T$
+
+\subsection*{computation}
+\goalgroup $H$ >> atom\_eq($a$;$b$;$t$;$t'$)=$t''$ in $T$ by reduce 1 true \\*
+\subgoal >> $a$=$b$ in atom \\*
+\subgoal >> $t$=$t''$ in $T$
+
+\goalskip
+
+\goal $H$ >> atom\_eq($a$;$b$;$t$;$t'$)=$t''$ in $T$ by reduce 1 false \\*
+\subgoal >> ($a$=$b$ in atom) -> void \\*
+\subgoal >> $t'$=$t''$ in $T$
+
+
+\section{Void}\index{void rules}{}
+\subsection*{formation}
+
+\goal $H$ >> \U{i} ext void by intro void 
+
+
+\goalskip
+
+\goal $H$ >> void in \U{i}  by intro
+
+\subsection*{noncanonical}
+\goal $H$,$z$:void >> $T$ ext any($z$) by elim $z$
+                                             
+
+\goalskip
+
+\goal $H$ >> any($e$) in $T$  by intro \\*
+\subgoal >> $e$ in void
+\par
+
+% -*- Mode: Text -*-
+\section{Int}\index{integer rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext int by intro int  
+
+
+\goalskip
+
+\goal $H$ >> int in \U{i}  by intro
+
+\subsection*{canonical}
+\goal $H$ >> int ext $c$ by intro $c$
+
+
+\goalskip
+
+\goal $H$ >> $c$ in int by intro
+\begin{quote}\rm
+where $c$ must be an integer constant.
+\end{quote}
+
+\subsection*{noncanonical}
+\goal $H$ >> -$t$ in int \\*
+\subgoal >> $t$ in int
+
+\goalskip
+
+\goal $H$ >> int ext $m\ op\ n$ by intro $op$ \\*
+\subgoal >> int ext $m$\\*
+\subgoal >> int ext $n$
+
+\goalskip
+
+\goal $H$ >> $m\ op\ n$ in int by intro \\*
+\subgoal >> $m$ in int \\*
+\subgoal >> $n$ in int
+\begin{quote}\rm
+where  $op$ must be one of {\tt +,-,*,/,} or {\tt mod}.
+\end{quote}
+
+\goal $H$,$x$:int,$H'$ >> $T$  
+           ext ind($x$;$y,z$.$t_d$;$t_b$;$y,z$.$t_u$)
+           by elim $x$ new $z$[,$y$]\\*
+\subgoal $y$:int,$y$<0,$z$:\mysubst{$T$}{$x$}{$y$+1}
+      >> \mysubst{$T$}{$x$}{$y$} ext $t_d$ \\*
+\subgoal >> \mysubst{$T$}{$x$}{0} ext $t_b$ \\*
+\subgoal $y$:int,0<$y$,$z$:\mysubst{$T$}{$x$}{$y$-1}
+      >> \mysubst{$T$}{$x$}{$y$} ext $t_u$
+\begin{quote}\rm
+Where the optional {\tt new} name $y$ must be given if $x$ occurs free in $H'$.
+\end{quote}
+
+\goal $H$ >> ind($e$;$x$,$y$.$t_d$;$t_b$;$x$,$y$.$t_u$) in $T[e/z]$ \\*
+\continuegoal by intro [over $z$.$T$] [new $u$,$v$] \\*
+\subgoal  >> $e$ in int \\*
+\subgoal $u$:int,$u$<0,$v$:$T[u{\tt +1}/z]$ >> $t_d[u,v/x,y]$ in $T[u/z]$ \\*
+\subgoal >> $t_b$ in $T[{\tt 0}/z]$ \\*                      
+\subgoal $u$:int,0<$u$,$v$:$T[u{\tt -1}/z]$ >> $t_u[u,v/x,y]$ in $T[u/z]$
+
+\goalskip
+
+\goal $H$ >> int\_eq($a$;$b$;$t$;$t'$) in $T$ by intro \\*
+\subgoal >> $a$ in int \\*
+\subgoal >> $b$ in int \\*
+\subgoal $a$=$b$ in int >> $t$ in $T$ \\*
+\subgoal ($a$=$b$ in int)->void >> $t'$ in $T$
+ 
+\goalskip
+
+\goal $H$ >> less($a$;$b$;$t$;$t'$) in $T$ by intro \\*
+\subgoal >> $a$ in int \\*
+\subgoal >> $b$ in int \\*
+\subgoal $a$<$b$ >> $t$ in $T$ \\*
+\subgoal ($a$<$b$)->void >> $t'$ in $T$
+
+\subsection*{computation}
+\goalgroup $H$ >> ind($nt$;$x$,$y$.$t_d$;$t_b$;$x$,$y$.$t_u$) = $t$ in $T$
+           by reduce 1 down\\*
+\subgoal >> $t_d$[$nt$,(ind($nt$+1;$x$,$y$.$t_d$;$t_b$;$x$,$y$.$t_u$))/$x$,$y$] = $t$ in $T$ \\*
+\subgoal >> $nt$<0
+
+\goalskip
+
+\goal $H$ >> ind($zt$;$x$,$y$.$t_d$;$t_b$;$x$,$y$.$t_u$) = $t$ in $T$
+          by reduce 1 base \\*
+\subgoal >> $t_b$ = $t$ in $T$ \\*
+\subgoal >> $zt$ = 0 in int
+
+\goalskip
+
+\goal $H$ >> ind($nt$;$x$,$y$.$t_d$;$t_b$;$x$,$y$.$t_u$) = $t$ in $T$
+           by reduce 1 up \\*
+\subgoal >> $t_u$[$nt$,(ind($nt$-1;$x$,$y$.$t_d$;$t_b$;$x$,$y$.$t_u$))/$x$,$y$] = $t$ in $T$ \\*
+\subgoal >> 0<$nt$
+
+\goalskip
+
+\goalgroup $H$ >> int\_eq($a$;$b$;$t$;$t'$) = $t''$ in $T$ by reduce 1 true \\*
+\subgoal >> $a$=$b$ in int \\*
+\subgoal >> $t$=$t''$ in $T$
+
+\goalskip
+
+\goal $H$ >> int\_eq($a$;$b$;$t$;$t'$) = $t''$ in $T$ by reduce 1 false \\*
+\subgoal >> ($a$=$b$ in int) -> void \\*
+\subgoal >> $t'$ = $t''$ in $T$
+
+\goalskip
+
+\goalgroup $H$ >> less($a$;$b$;$t$;$t'$) = $t''$ in $T$ by reduce 1 true \\*
+\subgoal >> $a$<$b$  \\*
+\subgoal >> $t$=$t''$ in $T$
+
+\goalskip
+
+\goal $H$ >> less($a$;$b$;$t$;$t'$) = $t''$ in $T$ by reduce 1 false \\*
+\subgoal >> $a$<$b$ -> void \\*
+\subgoal >> $t'$=$t''$ in $T$
+
+\par
+
+
+\section{Less}\index{less rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext $a$<$b$ by intro less \\*
+\subgoal $H$ >> int ext $a$\\*
+\subgoal $H$ >> int ext $b$
+
+
+\goalskip
+
+\goal $H$ >> $a$<$b$ in \U{i} by intro \\*
+\subgoal $H$ >> $a$ in int \\*
+\subgoal $H$ >> $b$ in int
+
+\subsection*{equality}
+\goal $H$ >> axiom in $a$<$b$ \\*
+\subgoal $H$ >> $a$<$b$
+\par
+
+\section{List}\index{list rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext $A$ list by intro list \\*
+\subgoal >> \U{i} ext $A$
+
+
+\goalskip
+
+\goal $H$ >> $A$ list in \U{i} by intro \\*
+\subgoal >> $A$ in \U{i}
+
+\subsection*{canonical}
+\goal $H$ >> $A$ list ext nil by intro nil at \U{i} \\*
+\subgoal  >> $A$ in \U{i}
+
+
+\goalskip
+
+\goal $H$ >> nil in $A$ list by intro at \U{i} \\*
+\subgoal  >> $A$ in \U{i}
+
+\goalskip
+
+\goal $H$ >> $A$ list ext $h$.$t$ by intro . \\*
+\subgoal >> $A$ ext $h$\\*
+\subgoal >> $A$ list ext $t$
+
+
+\goalskip
+
+\goal $H$ >> $a.b$ in $A$ list by intro \\*
+\subgoal >> $a$ in $A$ \\*
+\subgoal >> $b$ in $A$ list
+
+\subsection*{noncanonical}
+\goal $H$,$x$:$A$ list,$H'$ >> T 
+           ext list\_ind($x$;$t_b$;$u,v,w$.$t_u$) \\*
+\continuegoal by elim $x$ new $w$,$u$[,$v$] \\*
+\subgoal >> \mysubst{$T$}{$x$}{nil} ext $t_b$\\*
+\subgoal $u$:$A$,$v$:$A$ list,$w$:\mysubst{$T$}{$x$}{$v$}
+          >>  \mysubst{$T$}{$x$}{$u.v$} ext $t_u$
+
+\goalskip
+
+\goal $H$ >> list\_ind($e$;$t_b$;$x,y,z.t_u$) in \mysubst{$T$}{$z$}{$e$} \\*
+\continuegoal by intro [over $z.T$] using $A$ list [new u,v,w] \\*
+\subgoal >> $e$ in $A$ list \\*
+\subgoal >> $t_b$ in \mysubst{$T$}{$z$}{nil} \\*
+\subgoal$u$:$A$,$v$:$A$ list,$w$:\mysubst{$T$}{$z$}{$v$} \\*
+\continuesubgoal >> \mysubst{$t_u$}{$x,y,z$}{$u,v,w$} in 
+                    \mysubst{$T$}{$z$}{$u$.$v$}
+
+\subsection*{computation}
+\goalgroup $H$ >> list\_ind(nil;$t_b$;$u,v,w.t_u$) = $t$ in $T$  by reduce 1 \\*
+\subgoal >> $t_b$ = $t$ in $T$
+
+\goalskip
+
+\goal $H$ >> list\_ind($a.b$;$t_b$;$u,v,w.t_u$) = $t$ in $T$ by reduce 1 \\*
+\subgoal >> \mysubst{$t_u$}{$u,v,w$}{$a,b,$list\_ind($b$;$t_b$;$u,v,w.t_u$)}
+                = $t$ in $T$
+\par
+
+
+  
+\section{Union}\index{union rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext $A$|$B$ by intro union \\*
+\subgoal >> \U{i} ext $A$ \\*
+\subgoal >> \U{i} ext $B$
+
+
+\goalskip
+
+\goal $H$ >> $A$|$B$ in \U{i} by intro\\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal >> $B$ in \U{i}
+
+\subsection*{canonical}
+\goal $H$ >> $A$|$B$ ext inl($a$) by intro at \U{i} left \\*
+\subgoal >> $A$ ext $a$\\*
+\subgoal >> $B$ in \U{i}
+
+
+\goalskip
+
+\goal $H$ >> inl($a$) in $A$|$B$ by intro at \U{i} \\*
+\subgoal >> $a$ in $A$ \\*
+\subgoal >> $B$ in \U{i}
+
+\goalskip
+
+\goal $H$ >> $A$|$B$ ext inr($b$) by intro at \U{i} right \\*
+\subgoal >> $B$ ext $b$\\*
+\subgoal >> $A$ in \U{i}
+
+
+\goalskip
+
+\goal $H$ >> inr($b$) in $A$|$B$ by intro at \U{i} \\*
+\subgoal >> $b$ in $B$ \\*
+\subgoal >> $A$ in \U{i}
+
+\subsection*{noncanonical}
+\goal $H$,$z$:$A$|$B$,$H'$ >> $T$ 
+          ext decide($z$;$x$.$t_l$;$y$.$t_r$)
+	  by elim $z$ [new $x$,$y$] \\*
+\subgoal $x$:$A$,$z$=inl($x$) in $A$|$B$ >>
+         \mysubst{$T$}{$z$}{inl($x$)} ext $t_l$\\*
+\subgoal $y$:$B$,$z$=inr($y$) in $A$|$B$ >>
+         \mysubst{$T$}{$z$}{inr($y$)} ext $t_r$
+\goalskip
+
+\goal $H$ >> decide($e$;$x$.$t_l$;$y$.$t_r$) in \mysubst{$T$}{$z$}{$e$} \\*
+\continuegoal by intro [over $z$.$T$] using $A$|$B$ [new u,v] \\*
+\subgoal  >> $e$ in $A$|$B$ \\*
+\subgoal $u$:$A$, $e$=inl($u$) in $A$|$B$ >>
+         \mysubst{$t_l$}{$x$}{$u$} in \mysubst{$T$}{$z$}{inl($u$)} \\*
+\subgoal $v$:$B$, $e$=inr($v$) in $A$|$B$ >>
+         \mysubst{$t_r$}{$y$}{$v$} in \mysubst{$T$}{$z$}{inr($v$)}
+
+\subsection*{computation}
+\goalgroup $H$ >> decide(inl($a$);$x$.$t_l$;$y$.$t_r$) = $t$ in $T$ by reduce 1 \\*
+\subgoal  >> \mysubst{$t_l$}{$x$}{$a$} = $t$ in $T$
+
+\goalskip
+
+\goal $H$ >> decide(inr($b$);$x$.$t_l$;$y$.$t_r$) = $t$ in $T$ by reduce 1 \\*
+\subgoal  >> \mysubst{$t_r$}{$y$}{$b$} = $t$ in $T$
+\par
+
+\section{Function}\index{function rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext $x$:$A$->$B$ by intro function $A$ new $x$ \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal $x$:$A$ >> \U{i} ext $B$
+
+
+\goalskip
+
+\goal $H$ >> $x$:$A$->$B$ in \U{i} by intro [new $y$] \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal $y$:$A$ >> \mysubst{$B$}{$x$}{$y$} in \U{i}
+
+\goalskip
+
+\goal $H$ >> \U{i} ext $A$->$B$ by intro function \\*
+\subgoal >> \U{i} ext $A$ \\*
+\subgoal >> \U{i} ext $B$
+
+
+\goalskip
+
+\goal $H$ >> $A$->$B$ in \U{i} by intro \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal >> $B$ in \U{i}
+
+\subsection*{canonical}
+\goal $H$ >> $x$:$A$->$B$ ext \bs$y$.$b$ by intro at \U{i} [new $y$] \\*
+\subgoal $y$:$A$ >> \mysubst{$B$}{$x$}{$y$} ext $b$ \\*
+\subgoal >> $A$ in \U{i}
+
+
+\goalskip
+
+\goal $H$ >> \bs $x$.$b$ in $y$:$A$->$B$ by intro at \U{i} [new $z$] \\*
+\subgoal $z$:$A$ >> \mysubst{$b$}{$x$}{$z$} in \mysubst{$B$}{$y$}{$z$} \\*
+\subgoal >> $A$ in \U{i}
+
+\subsection*{noncanonical}
+\goal $H$,$f$:($x$:$A$->$B$),$H'$ >> $T$ ext \mysubst{$t$}{$y$}{$f$($a$)}
+              by elim $f$ on $a$ [new $y$] \\*
+\subgoal >> $a$ in $A$ \\*
+\subgoal $y$:\mysubst{$B$}{$x$}{$a$},
+             $y$=$f$($a$) in \mysubst{$B$}{$x$}{$a$} >> $T$ ext $t$
+
+
+\goalskip
+
+\goal $H$,$f$:($x$:$A$->$B$),$H'$ >> $T$ ext \mysubst{$t$}{$y$}{$f$($a$)}
+             by elim $f$ [new $y$] \\*
+\subgoal >> $A$ ext $a$ \\*
+\subgoal $y$:$B$ >> $T$ ext $t$
+\begin{quote}\rm
+where the first of the two rules above is used when $x$ occurs free
+in $B$, and the second when it
+does not.
+\end{quote}
+
+\goal $H$ >> $f$($a$) in \mysubst{$B$}{$x$}{$a$} by intro using $x$:$A$->$B$ \\*
+\subgoal >> $f$ in $x$:$A$->$B$ \\*
+\subgoal >> $a$ in $A$
+
+\subsection*{equality}\index{extensionality}{}
+\goal $H$ >> $f$=$g$ in $x$:$A$->$B$ ext $t$ \\*
+\continuegoal by extensionality [at \U{i}] [using $u$:$C$->$D$, $v$:$E$->$F$] [new $z$] \\*
+\subgoal   $z$:$A$ >> $f$($z$)=$g$($z$) in $B$[$z$/$x$] ext $t$ \\*
+\subgoal       >> $A$ in \U{i}\\* 
+\subgoal       >> $f$ in $u$:$C$->$D$\\*
+\subgoal       >> $g$ in $v$:$E$->$F$
+\begin{quote}\rm
+where, if the ``using'' terms are not supplied, then {\tt $x$:$A$->$B$} is
+used.  This rule also applies to unary equalities.
+\end{quote}
+
+
+
+
+\subsection*{computation}
+\goal $H$ >> (\bs $x$.$b$)($a$) = $t$ in $B$ by reduce 1 \\*
+\subgoal >> \mysubst{$b$}{$x$}{$a$} = $t$ in $B$
+
+\par
+
+
+ 
+\section{Product}\index{product rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext $x$:$A$\#$B$  by intro product $A$ new $x$ \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal $x$:$A$ >> \U{i} ext $B$
+
+
+\goalskip
+
+\goal $H$ >> $x$:$A$\#$B$ in \U{i} by intro [new $y$] \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal $y$:$A$ >> \mysubst{$B$}{$x$}{$y$} in \U{i}
+
+\goalskip
+
+\goal $H$ >> \U{i} ext $A$\#$B$ by intro product \\*
+\subgoal >> \U{i} ext $A$\\*
+\subgoal >> \U{i} ext $B$
+
+
+\goalskip
+
+\goal $H$ >> $A$\#$B$ in \U{i} by intro \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal >> $B$ in \U{i}
+
+\subsection*{canonical}
+\goal $H$ >> $x$:$A$\#$B$ ext <$a$,$b$> by intro at \U{i} $a$ [new $y$] \\*
+\subgoal >> $a$ in $A$ \\*
+\subgoal >> \mysubst{$B$}{$x$}{$a$} ext $b$\\*
+\subgoal $y$:$A$ >> \mysubst{$B$}{$x$}{$y$} in \U{i}
+
+
+\goalskip
+
+\goal $H$ >> <$a$,$b$> in $x$:$A$\#$B$ by intro at \U{i} [new $y$] \\*
+\subgoal >> $a$ in $A$ \\*
+\subgoal >> $b$ in \mysubst{$B$}{$x$}{$a$} \\*
+\subgoal $y$:$A$ >> \mysubst{$B$}{$x$}{$y$} in \U{i}
+
+\goalskip
+
+\goal $H$ >> $A$\#$B$ ext <$a$,$b$> by intro \\*
+\subgoal >> $A$ ext $a$ \\*
+\subgoal >> $B$ ext $b$
+
+
+\goalskip
+
+\goal $H$ >> <$a$,$b$> in $A$\#$B$ by intro \\*
+\subgoal >> $a$ in $A$ \\*
+\subgoal >> $b$ in $B$
+
+\subsection*{noncanonical}
+\goal $H$,$z$:($x$:$A$\#$B$),$H'$ >> $T$ 
+         ext spread($z$;$u,v$.$t$)
+	 by elim $z$ new $u,v$\\*
+\subgoal $u$:$A$,$v$:\mysubst{$B$}{$x$}{$u$},$z$=<$u$,$v$> in $x$:$A$\#$B$
+         >> \mysubst{$T$}{$z$}{<$u$,$v$>} ext $t$
+
+
+\goalskip
+
+\goal $H$ >> spread($e$;$x,y.t$) in \mysubst{$T$}{$z$}{$e$} \\*
+\continuegoal by intro [over $z.T$] using  $w$:$A$\#$B$ [new $u,v$] \\*
+\subgoal >> $e$ in $w$:$A$\#$B$ \\*
+\subgoal $u$:$A$,$v$:\mysubst{$B$}{$w$}{$u$},$e$=<$u$,$v$> in $w$:$A$\#$B$ >>
+            \mysubst{$t$}{$x,y$}{$u,v$} in \mysubst{$T$}{$z$}{<$u$,$v$>}
+
+\subsection*{computation}
+\goal $H$ >> spread(<$a$,$b$>;$x,y.t$) = $s$ in $T$ by reduce 1 \\*
+\subgoal >> \mysubst{$t$}{$x,y$}{$a,b$} = $s$ in $T$
+
+\par
+
+\section{Quotient}\index{quotient}{}
+\subsection*{formation}\index{quotient/formation}{}
+\goal $H$ >> \U{i} ext ($x$,$y$):$A$//$E$ by intro quotient $A$,$E$ new $x$,$y$,$z$ \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal $x$:$A$,$y$:$A$ >> $E$ in \U{i} \\*	
+\subgoal $x$:$A$ >> \mysubst{$E$}{$x,y$}{$x,x$} \\*
+\subgoal $x$:$A$,$y$:$A$,\mysubst{$E$}{$x,y$}{$x,y$}
+          >> \mysubst{$E$}{$x,y$}{$y,x$} \\*
+\subgoal $x$:$A$,$y$:$A$,$z$:$A$,\mysubst{$E$}{$x,y$}{$x,y$},\
+          \mysubst{$E$}{$x,y$}{$y,z$} >> \mysubst{$E$}{$x,y$}{$x,z$}
+
+
+\goalskip
+
+\goal $H$ >> ($u,v$):$A$//$E$ in \U{i} by intro new $x$,$y$,$z$\\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal $x$:$A$,$y$:$A$ >> \mysubst{$E$}{$u,v$}{$x,y$} in \U{i} \\*
+\subgoal $x$:$A$ >> \mysubst{$E$}{$u,v$}{$x,x$} \\*
+\subgoal $x$:$A$,$y$:$A$,\mysubst{$E$}{$u,v$}{$x,y$}
+          >> \mysubst{$E$}{$u,v$}{$y,x$} \\*
+\subgoal $x$:$A$,$y$:$A$,$z$:$A$,\mysubst{$E$}{$u,v$}{$x,y$},\
+          \mysubst{$E$}{$u,v$}{$y,z$} >> \mysubst{$E$}{$u,v$}{$x,z$}
+
+\subsection*{canonical}\index{quotient/intro}{}
+\goal $H$ >> ($x,y$):$A$//$E$ ext $a$ by intro at \U{i} \\*
+\subgoal >> ($x,y$):$A$//$E$ in \U{i} \\*
+\subgoal >> $A$ ext $a$
+
+
+\goalskip
+
+\goal $H$ >> $a$ in ($x,y$):$A$//$E$ by intro at \U{i} \\*
+\subgoal >> ($x,y$):$A$//$E$ in \U{i} \\*
+\subgoal >> $a$ in $A$ 
+
+\subsection*{noncanonical}\index{quotient/elim}{}
+\goal $H$,$u$:($x,y$):$A$//$E$,$H'$ >> $t$=$t'$ in $T$ 
+         by elim $u$ at \U{i} [new $v,w$]\\*
+\subgoal $v$:$A$,$w$:$A$ >> \mysubst{$E$}{$x,y$}{$v,w$} in \U{i}\\*
+\subgoal >> $T$ in \U{i}\\*
+\subgoal $v$:$A$,$w$:$A$,\mysubst{$E$}{$x,y$}{$v,w$} >> 
+\mysubst{$t$}{$u$}{$v$} = \mysubst{$t'$}{$u$}{$w$} in
+                  \mysubst{$T$}{$u$}{$v$}
+
+\subsection*{equality}\index{quotient/equality}{}
+\goal $H$ >> ($x,y$):$A$//$E$ = ($u,v$):$B$//$F$ in \U{i} by intro [new $r,s$]\\*
+\subgoal >> ($x,y$):$A$//$E$ in \U{i} \\*
+\subgoal >> ($u,v$):$B$//$F$ in \U{i} \\*
+\subgoal >> $A$ = $B$ in \U{i} \\*
+\subgoal $A$=$B$ in \U{i},$r$:$A$,$s$:$A$ >>
+         \mysubst{$E$}{$x,y$}{$r,s$} -> \mysubst{$F$}{$u,v$}{$r,s$} \\*
+\subgoal $A$=$B$ in \U{i},$r$:$A$,$s$:$A$ >>
+         \mysubst{$F$}{$u,v$}{$r,s$} -> \mysubst{$E$}{$x,y$}{$r,s$}
+
+\goalskip
+
+\goal $H$ >> $t$ = $t'$ in ($x,y$):$A$//$E$ by intro at \U{i} \\*
+\subgoal >> ($x,y$):$A$//$E$ in \U{i} \\*
+\subgoal >> $t$ in $A$ \\*
+\subgoal >> $t'$ in $A$ \\*
+\subgoal >> \mysubst{$E$}{$x,y$}{$t,t'$}
+\par
+
+\section{Set}\index{set rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext \lc$x$:$A$|$B$\rc{} by intro set $A$ new $x$ \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal $x$:$A$ >> \U{i} ext $B$
+
+
+\goalskip
+
+\goal $H$ >> \lc $x$:$A$|$B$\rc{} in \U{i} by intro [new y]\\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal $y$:$A$ >> \mysubst {$B$}{$x$}{$y$} in \U{i}
+
+\goalskip
+
+\goal $H$ >> \U{i} ext \lc$A$|$B$\rc{} by intro set \\*
+\subgoal >> \U{i} ext $A$\\*
+\subgoal >> \U{i} ext $B$
+
+
+\goalskip
+
+\goal $H$ >> \lc $A$|$B$\rc{} in \U{i} by intro \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal >> $B$ in \U{i}
+
+\subsection*{canonical}
+\goal $H$ >> \lc $x$:$A$|$B$\rc{} ext $a$ by intro at \U{i} $a$ [new $y$]\\*
+\subgoal >> $a$ in $A$ \\* 
+\subgoal >> \mysubst{$B$}{$x$}{$a$} ext $b$\\*
+\subgoal $y$:$A$ >> \mysubst{$B$}{$x$}{$y$} in \U{i}
+\begin{quote}\rm where all hidden hypothesis in $H$ become unhidden in the second
+subgoal.
+\end{quote}
+
+\goal $H$ >> $a$ in \lc$x$:$A$|$B$\rc{} by intro at \U{i} [new $y$]\\*
+\subgoal >> $a$ in $A$ \\*
+\subgoal >> \mysubst{$B$}{$x$}{$a$}\\*
+\subgoal $y$:$A$ >> \mysubst{$B$}{$x$}{$y$} in \U{i}
+
+
+\goalskip
+
+\goal $H$ >> \lc $A$|$B$\rc{} ext $a$ by intro \\*
+\subgoal >> $A$ ext $a$ \\*
+\subgoal >> $B$ ext $b$
+\begin{quote}\rm where all hidden hypotheses in $H$ become unhidden in the second
+subgoal.
+\end{quote}
+
+\goal $H$ >> $a$ in \lc $A$|$B$\rc{} by intro\\*
+\subgoal >> $a$ in $A$ \\*
+\subgoal >> $B$ ext $b$
+
+
+\subsection*{noncanonical}
+\goalgroup $H$,$u$:\lc $x$:$A$|$B$\rc,$H'$ >> $T$ ext $t$ by elim $u$ \\*
+\subgoal $H$, $u$:$A$, [\mysubst{$B$}{$x$}{$u$}], $H'$ >> $T$ ext $t$
+
+\goalskip
+
+\goal $H$,$u$:\lc $x$:$A$|$B$\rc,$H'$ >> $T$ 
+                 ext (\bs $y$.$t$)($u$) 
+                 by elim $u$ [new $y$] \\*
+\subgoal $H$,$u$:\lc $x$:$A$|$B$\rc,$H'$, $y$:$A$, [\mysubst{$B$}{$x$}{$y$}] >> 
+                  \mysubst{$T$}{$u$}{$y$} ext $t$
+
+\begin{quote}\rm
+where which one of the two above rules 
+is to applied in any instance is determined by
+whether or not the variable $u$ of the goal actually appears to the user
+(as opposed to being generated when extraction is done).  If it does
+appear, the first case applies.  Note that the subgoals have a hidden
+hypothesis.
+\end{quote}
+
+\subsection*{equality}
+\goal $H$ >> \lc$x$:$A$|$B$\rc{} =  \lc$y$:$A'$|$B'$\rc{}
+             in \U{i} by intro [new $z$] \\*
+\subgoal >> $A$ = $A'$ in \U{i} \\*
+\subgoal $z$:$A$ >> \mysubst{$B$}{$x$}{$z$} = \mysubst{$B'$}{$y$}{$z$} in \U{i} \\*
+
+\par
+
+\section{Equality}\index{equality rules}{}
+\subsection*{formation}
+\goal $H$ >> \U{i} ext $a_1$=$\cdots$=$a_n$ in $A$ by intro equality $A$ $n$ \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal >> $A$ ext $a_1$ \\*
+\subgoal \vellipsis \\*
+\subgoal >> $A$ ext $a_n$
+\begin{quote}\rm
+where the default for $n$ is 1.
+\end{quote}
+
+\goal $H$ >> ($a_1$=$\cdots$=$a_n$ in $A$) in \U{i} by intro \\*
+\subgoal >> $A$ in \U{i} \\*
+\subgoal >> $a_1$ in $A$ \\*
+\subgoal \vellipsis \\*
+\subgoal >> $a_n$ in $A$
+
+\subsection*{canonical}
+\goal $H$ >> axiom in ($a$ in $A$) by intro \\*
+\subgoal >> $a$ in $A$
+
+\goalskip
+
+\goal $H$,$x$:$T$,$H'$ >> $x$ in $T$ by intro
+\begin{quote}\rm
+This rule does not work when T is a set or quotient term,
+since intro will invoke the equality rule for the set or quotient type,
+respectively.
+In any case, the {\tt equality} rule can be used.
+\end{quote}
+
+
+\par
+
+\section{Universe}\index{universe rules}{}
+\subsection*{canonical}
+\goal $H$ >> \U{i} ext \U{j} by intro universe \U{j}
+
+
+\goalskip
+
+\goal $H$ >> \U{j} in \U{i}  by intro
+\begin{quote}\rm
+where $j<i$.
+Note that all the formation rules are intro rules for a universe type.
+\end{quote}
+
+\subsection*{noncanonical}
+\begin{quote}\rm
+Currently there are no rules in the system for analyzing universes.
+At some later date such rules may be added.
+\end{quote}
+
+\section{Tactic}
+\label{tactic-rule}
+\goal $H$ >> $C$ ext $t$ by \id{tactic-text} \\*
+\subgoal $H_1$ >> $C_1$ ext $t_1$ \\*
+\subgoal $\vdots$ \\*
+\subgoal $H_n$ >> $C_1$ ext $t_n$ \\*
+\begin{quote}\rm
+The text \id{tactic-text} must be an ML expression of type \tid{tactic}
+(see Section~\ref{ML} for a definition of this).
+The subgoals are the result of the following procedure.  The tactic
+denoted by \id{tactic-text} is applied to the degenerate object of type
+\tid{proof} with hypotheses $H$, conclusion $C$, no refinement and an empty
+list of children.\footnote{Also, before the tactic is applied, 
+the ML variable
+\tid{new\_id\_initialized} is assigned the value \tid{false}.  This
+variable is referenced only by functions that generate new identifiers.}
+The evaluation of the application must succeed.  The
+result is validation and a proof list.  The validation is applied to the
+proof list.  This evaluation of the application must succeed.  The result
+is a proof tree $p$.  The sequent at the root of $p$ must be the
+goal \tid{$H$>>$C$}.  The subgoals \tid{$H_i$>>$C$} are the sequents, in
+left-to-right order, at the unproved leaves of $p$.  The
+extraction term $t$ is the extraction computed for $p$, where the terms 
+$t_i$ are assumed as extraction terms for the corresponding unproved
+leaves.
+\end{quote}
+
+\section{Miscellaneous}
+\subsection*{hypothesis}
+\goal $H$,$x$:$A$,$H'$ >> $A'$ ext $x$ by hyp $x$
+\begin{quote}\rm
+where $A'$ is $\alpha$-convertible to $A$
+\end{quote}
+
+\subsection*{thinning}
+\goal $H$ >> $A$ ext $t$ by thinning $i_1, \ldots, i_k$\\*
+\subgoal $H'$ >> $A$ ext $t$
+\begin{quote}\rm
+where $i_1, \ldots, i_k$  are hypothesis numbers and where $H'$
+is obtained from $H$ by removing the smallest number of hypotheses that
+includes the named hypotheses and such that the subgoal sequent is closed
+(that is, every free variable of the conclusion or of a hypothesis is
+declared to the left in the sequent).  (The rule fails if no such sequent
+exists.)
+\end{quote}
+
+\subsection*{sequence}\index{sequence rule}{}
+\goal $H$ >> $T$ 
+        ext (\bs$x_1$.$\cdots$(\bs$x_n$.$t$)($t_n$)$\cdots$)($t_1$)\\*
+\continuegoal by seq $T_1,\dots,T_n$ [new $x_1,\dots,x_n$] \\*
+\subgoal >> $T_1$ ext $t_1$\\*
+\subgoal $x_1$:$T_1$ >> $T_2$ ext $t_2$ \\*
+\subgoal \vellipsis \\*
+\subgoal $x_1$:$T_1$,$\dots$,$x_n$:$T_n$ >> $T$ ext $t$
+
+\subsection*{lemma}\index{lemma rule}{}
+\goal $H$ >> $T$
+          ext \mysubst{$t$}{$x$}{term\_of($theorem$)}
+          by lemma $theorem$ [new $x$] \\*
+\subgoal $x$:$C$ >> $T$ ext $t$
+\begin{quote}\rm
+where $C$ is the conclusion of the complete theorem $theorem$.
+\end{quote}
+
+\subsection*{def}\index{def rule}{}
+\goal $H$ >> $T$ ext $t$ by def ${theorem}$ [new $x$] \\*
+\subgoal $x$:term\_of(${theorem}$) = ${ext}$-${term}$ in $C$ >>
+$T$ ext $t$
+\begin{quote}\rm
+where $C$ is the conclusion of the complete theorem, ${theorem}$,
+and ${ext}$-${term}$ is the term extracted from that theorem.
+\footnote{This rule introduces very strong interproof dependencies.
+A proof using this rule depends not only on $C$ but also on the way
+$C$ is proved.}
+\end{quote}
+
+\subsection*{explicit intro}\index{explicit intro rule}{}
+\goal $H$ >> $T$ ext $t$ by explicit intro $t$ \\*
+\subgoal >> $t$ in $T$
+
+\subsection*{cumulativity}\index{cumulativity rule}{}
+\goal $H$ >> $T$ in \U{i}{} by cumulativity at \U{j} \\*
+\subgoal >> $T$ in \U{j}
+\begin{quote}\rm
+where $j<i$
+\end{quote}
+
+\subsection*{substitution}\index{substitution rule}{}
+\goal $H$ >> \mysubst{$T$}{$x$}{$t$}
+              ext $s$
+              by subst at \U{i} $t$=$t'$ in $T'$ over $x.T$ \\*
+\subgoal >> $t$ = $t'$ in $T'$ \\*
+\subgoal >> \mysubst{$T$}{$x$}{$t'$} ext $s$\\*
+\subgoal $x$:$T'$ >> $T$ in \Ui
+
+
+
+\subsection*{equality}\index{equality rule}{}
+\goal $H$ >> $t$ = $t'$ in $T$ by equality
+\begin{quote}\rm
+where the equality of $t$ and $t'$ can be deduced from assumptions that are
+equalities over $T$ (or equalities over $T'$ where $T = T'$ is deducible
+using only reflexivity, commutativity and transitivity)
+using only reflexivity, commutativity and transitivity.
+\end{quote}
+
+\subsection*{direct computation}
+
+\goal $H$ >>  $T$
+              ext $t$
+              by compute using $S$ \\*
+\subgoal >> $T'$ ext $t$
+
+\goalskip
+
+\goal $H$, $x$:$T$, $H'$ >> $T''$ 
+                            ext $t$
+			    by compute hyp i using $S$ \\*
+\subgoal $H$, $x$:$T'$, $H'$>> $T''$ ext $t$
+
+\begin{quote}\rm
+where $S$ is
+obtained from $T$ by ``tagging'' some of its subterms and $T'$ is generated
+by the system by performing some computation steps on subterms of $T$, as
+indicated by the tags.  A subterm $t$ is tagged by replacing it by
+{\tt[[*;$t$]]} or {\tt [[$n$;$t$]]}, where $n$ is a positive integer
+constant.  The latter tag causes $t$ to be computed for $n$ steps, and the
+former causes computation to proceed as far as possible.  Note that many of
+the computation rules, such as the one for product, are instances of direct
+computation.
+\end{quote}
+
+\goal $H$ >> $T$  ext $t$  by reverse\_direct\_computation using $S$\\*
+\subgoal  >> $T'$ ext $t$
+
+\goalskip
+
+\goal $H$, $x$:$T$, $H'$ >> $T''$  ext $t$ 
+       by reverse\_direct\_computation\_hyp $i$ $S$\\*
+\subgoal  $H$, $x$:$T'$, $H'$ >> $T''$ ext $t$
+\begin{quote}\rm
+where $S$ is a legal tagging of $T'$ and $T$ is the
+result of performing the computations indicated in $S$.
+\end{quote}
+
+
+
+\subsection*{eval}
+
+\goal >> $T$ ext $t$ by eval $b$ $\id{thm}_1$,\ldots,$\id{thm}_n$ \\*
+\subgoal  >> $T'$ ext $t$
+
+\goalskip
+
+\goal $H$, $x$:$T$, $H'$ >> $G$ ext $t$ 
+              by eval $b$ $\id{thm}_1$,\ldots,$\id{thm}_n$ \\*
+\subgoal  $H$, $x$:$T'$, $H'$ >> $G$ ext $t$
+
+\begin{quote}\rm
+These rules are efficient special cases of the direct computation
+rules.  For the purpose of the description below, we define a particular
+evaluation function, call it $f$, which takes a list $l$ of names of
+theorems, a boolean value $b$, and a term $t$, and returns a term $t'$ that
+is obtained from t by performing a particular sequence of computation
+steps.  Specifically, evaluation proceeds as follows.  If $t$ is
+non-canonical, evaluate the principal argument(s); if not all the evaluated
+principal arguments are canonical and of the proper type, then return $t$
+with principal arguments replaced by their evaluated forms; otherwise,
+contract the redex and evaluate the result.  If $t$ is canonical, then
+continue by evaluating the immediate subterms of $t$ that are not within
+the scope of a binding variable of $t$.  If $t$ is {\tt term\_of(\id{thm})}
+then return $t$ if $b$ is true and \id{thm} is in the list $l$ or if $b$ is
+false and \id{thm} is not in $l$, otherwise continue by evaluating the term
+that {\tt term\_of(\id{thm})} stands for.  If $t$ is a variable, then
+return $t$.
+
+In the above rules, $b$ is \id{true} or \id{false}, each $\id{thm}_i$ is
+identifier, and $T'$ is the result of applying $f$ to the list
+[$\id{thm}_1$,\ldots,$\id{thm}_n$], $b$, and the term $T$.
+
+\end{quote}
+
+
+\subsection*{arith}\index{arith rule}{}
+\goal $H$ >> $C$ by arith at \Ui
+\begin{quote}\rm
+The {\tt arith} rule is used to justify conclusions which follow from
+hypotheses by
+a restricted form of arithmetic reasoning.  Roughly speaking, {\tt arith} knows
+about the ring axioms for integer multiplication and addition, the total
+order axioms of $<$, the reflexivity, symmetry and transitivity of equality, and
+a limited form of substitutivity of equality.  We will describe the class
+of problems decidable by {\tt arith} by giving an informal account of the
+procedure which {\tt arith} uses to decide whether or not $C$ follows from $H$.
+
+The terms that {\tt arith} understands are those denoting arithmetic relations,
+namely terms of the form {\tt $s$<$t$}, {\tt $s$=$t$ in int}
+or the negation of a term of this form.
+As the only equalities {\tt arith} concerns itself with are those of the form
+{\tt $s$=$t$ in int}, we will drop the {\tt in int} and write only
+{\tt $s$=$t$} in the rest of this description.
+For {\tt arith} the negation of an {\tt arith}metic relation $s \theta t$ where
+$\theta$ is one of $<$ or $=$ is of the form 
+{\tt ($s \theta t$)->void}, which we will write as $\neg s \theta t$.
+As integer equality and less-than are decidable relations,
+$s \theta t$ and $\neg \neg s \theta t$
+denote the same relation and will be treated identically by {\tt arith}.
+
+The {\tt arith} rule may be used to justify goals of the form
+
+{\goal H >> $C_1$ | $\ldots$ | $C_m$ },
+
+where each $C_i$ is a term denoting an arithmetic relation.  If {\tt arith}
+can justify the goal it will produce subgoals requiring the user to show
+that the left- and right-hand sides of each $C_i$ denote integer terms.
+As a convenience {\tt arith} will attempt to prove goals in which not all
+of the $C_i$ are arithmetic relations; it simply ignores such disjuncts.
+If it is successful on such a goal, it will produce subgoals requiring the
+user to prove that each such disjunct is a type at the level given in the
+invocation of the rule.
+
+Arith analyzes the hypotheses of the goal to find relevant assumptions.  In
+particular, it will maximally decompose each hypothesis into a term of the
+form {\tt $A_1$ \# \ldots \# $A_n$} ($n \ge 1$), and will use as an
+assumption any of the $A_i$ which are arithmetic relations of the form
+describe above.
+
+{\tt Arith} begins by normalizing the relevant formulas of the goal according to
+the following conventions:
+\begin {enumerate}
+  \item Rewrite each relation of the form {\tt $\neg s=t$} as the
+  equivalent {\tt $s<t$|$t<s$}.  
+  A conclusion $C$ follows from such an
+  assumption if it follows from either $s<t$ or $t<s$; hence {\tt arith}
+  tries both cases.
+  Henceforth, we assume that all negations of equalities have been
+  eliminated from consideration.
+  \item Replace all occurrences of terms which are not addition, subtraction
+  or multiplication by a new variable.
+  Multiple occurrences of the same term are replaced by the same variable.
+  {\tt Arith} uses only facts about addition, subtraction and multiplication,
+  so it
+  treats all other terms as atomic.
+  At this point all terms are built from integer constants and integer
+  variables using $+$, $-$ and $\ast$.
+  \item Rewrite all terms as polynomials
+  in canonical form.  The exact
+  nature of the canonical form is irrelevant (the reader may think
+  of it as the form used in high school algebra texts) but has the
+  important property that any two equal terms are identical.
+  Each term now has the form $p+c \theta p'+c'$, where $p$ and $p'$
+  are nonconstant polynomials in
+  canonical form, $c$ and $c'$ are
+  constants, and $\theta$ is one of $<$, $=$ or $\geq$ ($s \geq t$ is
+  equivalent to $\neg t < s$).
+  \item  Replace each nonconstant polynomial $p$ by a new variable,
+  with each occurrence of $p$ being replaced by the same variable.
+  This amounts to treating each nonconstant polynomial as an atom.
+  Now each formula is of the form $z+c \theta z'+c'$.
+  {\tt Arith} now decides whether or not the conclusion follows from the hypotheses
+  by using the total order axioms of $<$, the reflexivity, symmetry,
+  transitivity and substitutivity of $=$, and the following so-called
+  {\it trivial\index{trivial monotonicity}{} monotonicity} axioms ($c$ and $d$
+  are constants).
+  \begin{itemize}
+    \item $x \geq y, c \geq d \Rightarrow x+c \geq y+d$
+    \item $x \geq y, c \leq d \Rightarrow x-c \geq y-d$
+  \end{itemize}
+  These rules capture all of the acceptable forms of reasoning which may be
+  applied to formulas in canonical form.
+\end{enumerate}
+
+For a detailed account of the {\tt arith} rule 
+and a proof of its correctness, see
+the article by Tat-hung Chan cited in the book.
+\end{quote}
+
+
+
+\subsection*{monotonicity}
+
+\goal $H$ >> $T$ ext $t$ by monotonicity  $h_1$ {\em{}op} $h_2$\\*
+\subgoal  $A$ >> $T$ ext $t$
+\begin{quote}\rm
+
+where $h_1$ and $h_2$ are numbers of hypotheses that have the form
+\mbox{\em$t_1$ rel $t_2$},
+(the possible values of {\em rel} are described below), and {\em{}op} is
+one of {\tt +}, {\tt -}, {\tt *}.  The new hypothesis $A$ is computed from
+{\em{}op} and hypotheses $h_1$ and $h_2$.
+
+
+The monotonicity rule performs one instance of an inference based upon
+``non-trivial'' monotonicity of integer arithmetic over {\tt +}, {\tt -}, and
+{\tt *}.  The new hypothesis $A$ is computed using tables (which are given
+below).  There is a separate table for each of the three possible values of
+{\em{}op} (there is a table for a fourth operator (/), but the code
+implementing this part of the rule mysteriously vanished).  The rows and
+columns of these tables are indexed by term schemas.  The new hypothesis is
+the conjunction (that is, independent product) of the formulas which are in
+the intersection of that row and that column of the table for {\em{}op}
+such that the row and column indices match hypotheses $h_1$ and $h_2$,
+respectively.  For example, if $h_1$ and $h_2$ are {\tt $t_1$>$t_2$} and
+{\tt $t_3$=$t_4$}, and {\em{}op} is {\tt +}, then the new hypothesis will
+be
+\begin{quote}
+\tt $t_1$+$t_3$>=$t_2$+$t_4$+1  \&  $t_1$+$t_4$>=$t_2$+$t_3$+1.  
+\end{quote}
+
+
+The monotonicity rule does not make use of definitions, so the above
+formula will actually appear in terms of Nuprl primitives.  The
+correspondence between the operators that appear in the tables and what is
+actually used by the monotonicity rule is as follows.
+\begin{quote} \tt
+\begin{tabular}{lll} 
+        $a$>$b$ &   {\em is represented by} &       $b$<$a$   \\
+        $a$=$b$  & &                           $a$=$b$ in int \\
+        $a$>=$b$ & &                           $a$<$b$ -> void   \\
+        $a$\verb`~`=$b$ & &                         ($a$=$b$ in int) -> void \\
+        $a$<=$b$ & &                        $b$<$a$ -> void.
+\end{tabular}
+\end{quote}
+
+The tables for addition, subtraction and
+multiplication are given in Figures~\ref{add-table},~\ref{sub-table}
+and~\ref{mult-table}, respectively.
+
+\begin{figure}
+\begin{verbatim}
+      |    z>w             z>=w            z=w             z~=w
+---------------------------------------------------------------------
+x>y   | x+z>=y+w+2      x+z>=y+w+1      x+z>=y+w+1         error
+      |                                 x+w>=y+z+1
+---------------------------------------------------------------------
+x>=y  | x+z>=y+w+1      x+z>=y+w        x+z>=y+w           error
+      |                                 x+w>=y+z
+---------------------------------------------------------------------
+x=y   | x+z>=y+w+1      x+z>=y+w        x+z=y+w         x+z~=y+w
+      | y+z>=x+w+1      y+z>=x+w        x+w=y+z         x+w~=y+z
+---------------------------------------------------------------------
+x~=y  |   error           error         x+z~=y+w           error
+                                        x+w~=y+z
+  
+\end{verbatim}
+\caption{\protect Monotonicity table for {\tt +}. \label{add-table}}
+\end{figure}
+
+\begin{figure}
+\begin{verbatim}
+      |    z>w             z>=w            z=w            z~=w
+---------------------------------------------------------------------
+x>y   | x-w>=y-z+2      x-w>=y-z+1      x-w>=y-z+1        error
+      |                                 x-z>=y-w+1
+---------------------------------------------------------------------
+x>=y  | x-w>=y-z+1      x-w>=y-z        x-w>=y-z          error
+      |                                 x-z>=y-w
+---------------------------------------------------------------------
+x=y   | x-w>=y-z+1      x-w>=y-z        x-w=y-z         x-w~=y-z
+      | y-w>=x-z+1      y-w>=x-z        y-w=x-z         x-z~=y-w
+---------------------------------------------------------------------
+x~=y  |   error           error         x-w~=y-z          error
+                                        x-z~=y-w
+\end{verbatim}
+\caption{\protect Monotonicity table for {\tt -}. \label{sub-table}}
+\end{figure}
+
+\begin{figure}
+\begin{verbatim}
+      |    y>=z            y>z             y=z             y~=z
+---------------------------------------------------------------------
+x>0   |   xy>=xz          xy>xz           xy=xz           xy~=xz
+---------------------------------------------------------------------
+x>=0  |   xy>=xz          xy>=xz          xy=xz           error
+---------------------------------------------------------------------
+x=0   |   xy=xz           xy=xz           xy=xz           xy=xz
+      |   xy=0            xy=0            xy=0            xy=0
+---------------------------------------------------------------------
+x<=0  |   xy<=xz          xy<=xz          xy=xz           error
+---------------------------------------------------------------------
+x<0   |   xy<=xz          xy<xz           xy=xz           xy~=xz
+---------------------------------------------------------------------
+x~=0  |   error           xy~=xz          xy=xz           xy~=xz
+\end{verbatim}
+\caption{\protect Monotonicity table for {\tt *}. \label{mult-table}}
+\end{figure}
+
+
+\end{quote}
+
+\subsection*{division}
+
+\goalgroup   H >> $a$ = $b$*($a$/$b$)+($a$ mod $b$)   by division\\*
+\subgoal      >> $b$\verb`~`=0\\*
+\subgoal      >> $a$>=0
+
+\goalskip
+
+\goal  H >> $a$ = $b$*($a$/$b$)-($a$ mod $b$)   by division\\*
+\subgoal      >> $b$\verb`~`=0\\*
+\subgoal      >> $a$<=0
+ 
+\goalskip
+
+\goal  H >> 0 < $a$/$b$   by division\\*
+\subgoal      >> 0<$b$ \& $a$>=$b$ | $b$<0 \& $a$<=$b$
+
+\goalskip
+
+\goal  H >> $a$/$b$ < 0   by division\\*
+\subgoal      >> 0<$b$ \& -$a$>=$b$ | $b$<0 \& -$a$<=$b$
+
+\goalskip
+
+\goal  H >> $a$/$b$ = 0   by division\\*
+\subgoal      >> $b$\verb`~`=0\\*
+\subgoal      >> $a$=0
+
+\goalskip
+
+\goal  H >> $a$/$b$ = $q$ \& $a$ mod $b$ = $r$   by division\\*
+\subgoal      >> $b$\verb`~`= 0\\*
+\subgoal      >> $a$>=0 \& $a$=$b$*$q$+$r$ | $a$<=0 \& $a$=$b$*$q$-$r$\\*
+\subgoal      >> 0<=$r$\\*
+\subgoal      >> 0<$b$ \& $r$<$b$ | $b$<0 \& $r$<-$b$
+\begin{quote}\rm
+These rules use the notations given above for the monotonicity rule.
+One note on ``user-friendliness'': the rule allows conclusions which match
+the patterns modulo commutativity over * and + and = .  For example, 0 =
+a/b will ``match'' the fifth division rule format; and (a/b)*b + (a mod b) =
+a will match the first pattern.  Thus one need not memorize specific
+details of the patterns, but only remember the ``basic format'' in order to
+know when the rule can be successfully invoked.
+\end{quote}
+
+
+
+\rm

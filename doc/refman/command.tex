@@ -1,0 +1,309 @@
+\chapter{The Command Language}
+
+With the {\em command language} one can
+create, delete and manipulate library objects, evaluate terms, call up the
+editors, and ``check'' (i.e., parse and generate code for) objects.
+{}When a ``{\tt P>}''{} prompt appears in the command/status window,
+the command processor is waiting for a command.%
+{}%
+\footnote{If the cursor is within an edit window \CMD{} must
+be pressed to get the ``{\tt P>}'' prompt.}
+Commands may be abbreviated to their shortest unique prefixes; for example,
+{\tt check} can be abbreviated to {\tt ch}, and {\tt create} can be
+abbreviated to {\tt cr}.  Names of library objects given as arguments to
+commands may also be abbreviated: the abbreviation refers to the object
+with exactly the abbreviated name if such an object exists, or else to the
+first library entry whose name extends the abbreviation.  Typing errors
+are corrected with the
+\DEL{}{} key (to delete a character) and the \ERASE{}{} key to delete the
+whole line.
+
+The commands are divided into four groups:
+a group consisting of commands that control the library window,
+a group consisting of commands that manipulate objects,
+a group consisting of commands that allow work to be saved between sessions,
+and a miscellaneous group.
+
+The following placeholders are used in the descriptions below
+of command syntax.
+
+\begin {description}
+\item[$object$]{} is the name of an object in the library or one of the
+    reserved names {\tt first} and {\tt last}
+
+\item[$objects$]{} is $object$ or $object${\tt -}$object$.
+    This provides a convenient way to refer to a range of entries.
+
+\item[$place$]{} is {\tt top}, {\tt bot}, {\tt before} $object$ or
+    {\tt after} $object$.
+    ({\tt Top} refers to the slot immediately before the first entry,
+    and {\tt bottom} refers to the slot immediately after the last entry.)
+
+\item[$kind$]{} is {\tt thm}, {\tt def}, {\tt eval} or {\tt ml}.
+
+\item[{$filename$}] is any legal file name.
+  
+\end {description}
+
+\noindent
+Optional arguments and keywords are indicated by curly braces.
+
+\section{Library Display}
+
+
+The library is a list of the objects defined by the user
+and may contain
+the theorems, definitions, evaluation bindings and ML code.
+Information about the library objects is displayed in the
+{\em library{} window\/}.
+The {\tt jump} and {\tt scroll} commands change what is being
+displayed in the library window, while
+the {\tt move} command changes the order of library objects.
+
+\begin {description}
+\item[{\tt jump} $object$]{} \hfill \break \noindent {}
+    The library is redisplayed so that the specified entry is visible.
+
+\item[{\tt move} $objects$ $place$]{} \hfill \break \noindent
+    {}
+    The specified library objects are moved to the position just after the
+    specified place.
+
+\item[{\tt scroll} \(\{{\tt up}\}\) \(\{number\}\)]{} \hfill \break
+    \noindent {}
+    The library window is moved the specified number of entries, in the
+    specified direction.
+    The default direction is down, and the default number of entries is one.
+    For example, {\tt scroll 5} shifts the window down five entries, while
+    {\tt scroll up} shifts the window up one entry.
+
+\item[{\tt up} \(\{number\}\)]{} \hfill \break \noindent {}
+Scroll the library up {\em number} pages (default 1).
+
+\item[{\tt down} \(\{number\}\)]{} \hfill \break \noindent {}
+Scroll the library down {\em number} pages (default 1).
+
+\item[{\tt top}]{} \hfill \break \noindent {}
+Scroll the library to the top.  This is the same as {\tt jump first}
+(when the library is non-empty).
+
+\item[{\tt bottom}]{} \hfill \break \noindent {}
+Scroll the library to the bottom.  This is similar to {\tt jump last}
+(when the library is non-empty).
+
+\end {description}
+
+\section{Manipulating Objects}
+
+These are the commands that directly manipulate{}
+objects.
+The most used of these commands is {\tt view},
+since most interaction with the system takes place within the editors
+started up by the {\tt view} command.
+
+\begin {description}
+\item[{\tt check} $objects$]{} \hfill \break
+\noindent {}{}
+    Each of the indicated objects is checked.
+    If necessary the library window is redisplayed to show the 
+    new statuses.
+
+    Checking a definition object causes the text in the object 
+    to be parsed.  If it is well-formed, then the definition
+    becomes available for use in other objects.
+
+    Checking an ML object simply calls ML on the text contained
+    in the object.
+ 
+    Checking an eval object causes the contained text to be
+    processed as if it were entered in eval mode (see below).
+
+    Checking a large theorem can take a while.
+    If the body of the theorem was dumped to a file and has not been fully
+    reloaded (see the {\tt dump} and {\tt load} commands below) then checking
+    the theorem reconstructs the body of the proof.
+    If it has already been reconstructed, then the proof is not changed by
+    checking.
+
+    Checking a theorem causes extraction to be done on the proof (unless
+    the proof has not been touched since the last time extraction was
+    performed).
+    
+
+\item[{\tt create} $name$ $kind$ $place$]{} \hfill \break
+\noindent {}
+    A new library entry
+    of the specified name and kind is created at the specified place.
+    The library is redisplayed so that the newly created object is the first
+    object in the library window.
+
+\item[{\tt delete} $objects$]{} \hfill \break
+\noindent {}
+    The specified objects are removed from the library.
+
+
+\item[{\tt view} {\it object}]{} \hfill \break
+\noindent {}
+    The object is displayed in a new window.
+    If the object is not already being viewed the new view will be fully
+    editable; otherwise, it and all other views of the object will be made
+    read-only.
+    The header line of the view will say {\tt SHOW} for a read-only view
+    and {\tt EDIT} for an editable view.
+
+    The editor used depends on the kind of object.
+    The refinement editor ({\em red}) is used on theorems, while the 
+    text{} editor ({\em ted}) is used for other objects.
+    For more information on ted and red see sections 7.4 and 7.5, respectively.
+    Typing \EXIT\ in an edit window will make Nuprl delete the
+    window and end its editing of the object.
+    If there are other edit views on the screen the cursor will be placed in one of
+    them; otherwise, the cursor will go back to the command window.
+
+    When {\tt view} is done on a large theorem, it may take some time to
+    activate red.
+    If the body of the theorem has been dumped but not fully reloaded
+    (see the {\tt dump} and {\tt load} commands below) then Nuprl reads the
+    body in and reconstructs it before starting the editor.
+
+\end {description}
+
+\section{Storing Results}
+
+The {\tt load} and {\tt dump} commands let one save results between Nuprl
+sessions.  When a library is dumped to a file, proofs are given a more
+compact representation.  The usual representation of a proof is a tree of
+sequents and rules.  The dumped representation is a ``rule-body tree'', which
+is obtained, roughly, by removing all the sequents from the usual
+representation, and by converting all the rules to their printed
+representations.  Thus the dumped representation contains essentially just
+the text that a user would type to reconstruct the proof.  One of the 
+savings that this provides has to do with tactics.  A field of the tactic
+rule contains the (hidden) subproof that was built by the tactic; this
+subproof is discarded in a dump, and only the text of the tactic is
+retained as a record of the inference.
+
+When libraries are loaded, the loaded proofs retain their compact
+representation.  When a proof is needed, as when it is to be viewed,
+checked, or extracted from, then the system will reconstruct the usual
+proof tree.  This has several drawbacks.  First, it can be time
+consuming: all the tactics used to construct the proof must be
+re-executed.  Secondly, if the tactics that were used to construct the
+proofs have since been modified, the reconstruction may fail.  Proofs
+are rather rigid objects, and seemingly insignificant changes to
+tactics can cause quite a bit of damage to previously constructed
+proofs.  
+
+When a theorem is extracted from, the extraction is stored with the
+theorem in the library.  When a theorem is dumped to a file, if it has
+an extraction, then an unparsed version of the extraction is also
+dumped.  This feature can considerably reduce the need for proof
+expansion.
+
+
+{}{}
+%
+\begin {description}
+\item[{\tt dump} {\it objects} \(\{{\tt to}\ {\it filename}\}\)]{} \hfill \break
+\noindent {}
+    Nuprl writes a representation of the selected objects from
+    the current library to the file.
+    If no filename is given the name of the file most recently loaded is used.
+    The dumped objects are not removed from the library.
+
+\item[{\tt load} \(\{{\tt fully}\}\) {\it place} {\tt from} {\it filename}]{} \hfill \break
+\noindent{}%
+    This is the command used to read in a file produced by {\tt dump}.
+    The decoded library entries are added one-by-one
+    to the library starting at location
+    $place$.
+    If an object in the dumped file has the same name as an object already in
+    the library, the object in the file is ignored.
+    When the load is finished a message is displayed giving the number of
+    objects loaded and the number of duplicates discarded.
+    The name of the loaded file is displayed in the header of the library
+    window.
+
+    Theorem objects are not fully reconstructed unless {\tt fully} is
+    specified.
+    The top of the proof (its goal and status) and the term extracted
+from the proof are loaded, but the actual
+    body of the proof (the rule applications and subgoals) is not.
+    This body is loaded on demand when the theorem is checked or viewed or when
+    the extractor needs the body of the proof.
+    When the body is actually loaded, the theorem's status is recalculated.
+    If the new status is different from the status the theorem had when it was
+    dumped, a warning is given.  
+
+
+\item[{\tt save} {\it name}]{} \hfill \break \noindent {} This allows
+temporary storing of Nuprl sessions in the Lisp environment.  The
+command will save the current Nuprl state, attaching the name {\em
+name}.  By ``state'' is meant all aspects of the state of the Nuprl
+session except the current window configuration; this includes the
+library, the values and types associated with ML identifiers, and the
+eval environment.  There is a special state name ``initial'' which is
+the state of Nuprl right after it is first loaded --- in particular it
+includes the default collection of tactics that is loaded with the
+system (unless the loading of the collection was overridden).  This
+initial state is restored automatically after the {\em save} command
+is invoked.  Note that since states are stored in the Lisp
+environment, they disappear when Lisp is exited.
+
+\item[{\tt restore} {\it name}]{} \hfill \break \noindent {}
+Restore a copy of the state named {\it name}, replacing the current state.
+
+\item[{\tt copystate} {\it name} {\it new-name}]{} \hfill \break \noindent {}
+Create a copy of state named {\em name}, giving it the name {\em
+new-state}.
+
+\item[{\tt states} ]{} \hfill \break \noindent {}
+List the names of states that have been created (and not killed).
+
+\item[{\tt kill} {\it name}]{} \hfill \break \noindent {}
+Make the state named {\it name} go away.
+
+
+\end {description}
+
+
+\section{Miscellaneous Commands}
+
+This section contains those commands which do not fit in any specific
+category.
+%
+\begin {description}
+\item[{\tt eval}]{}{}
+    Puts the command window into {\em eval} mode.
+    The prompt changes from ``{\tt P>}'' to ``{\tt EVAL>}''{} to
+    indicate the change.
+    Two kinds of inputs can be entered in eval mode:
+    terms and bindings.
+    Each input must be terminated by a double semicolon, ``{\tt ;;}''.
+    If a term is entered Nuprl evaluates it and prints its
+    value.
+    Bindings have the form \({\tt let}\ {\it id}={\it term}\).  If a binding
+    is entered Nuprl evaluates the term, prints its value and binds the
+    value to the identifier.
+    The evaluator's binding environment persists from one eval session to the
+    next.
+    It also includes bindings made when EVAL objects are checked.
+    Eval mode is terminated by \EXIT.
+
+\item[{\tt ml}]{}{}
+Puts the command window into {\em ML} mode.  It operates as eval mode,
+except that the input (terminated by ``{\tt{};;}'') is evaluated by ML and
+the result is printed in the command window.
+
+\item[{\tt exit}]{}{} Terminates the current \prl{} session, returning
+control to Lisp.
+
+
+\end {description}
+
+There is one final command, the \PRINT{}{} command.  This
+``snapshot'' window operation appends a printout of the visible contents of
+the current window to the current ``snapshot file''.  The default for the
+current snapshot file is ``snapshot.text'' in the current user's home
+directory; to change the snapshot file, use the ML function
+``set\_snapshot\_file''.

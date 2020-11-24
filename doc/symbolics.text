@@ -1,0 +1,102 @@
+	      Running Nuprl on a Symbolics Lisp Machine
+	      =========================================
+
+
+Almost all of the reference manual applies also to Nuprl on a
+Symbolics Lisp Machines.  This file describes the exceptions.  Most of
+these have to do with the window interface, key bindings, and
+Symbolics-specefic utilities.
+
+The book refers to a keypad and other special keys.  On the lisp
+machine, the keypad is simulated: when the meta key is held down, the
+leftmost block of 9 keys (q-w-e-a-s-d-z-x-c) is interpreted as a
+keypad.  Alternatively, one can use the hyper key and the block
+(u-i-o-j-k-l-m-,-.).  The lower-right key of the keypad, called
+"mouse" in the book, has no function; the "mouse mode" described in
+the book no longer exists.  See page 43 of the book for more on the
+keypad. The lisp machine's autorepeat feature (a key is repeated if
+held down) is useful with the arrow keys of the keypad.  To enable
+autorepeat, evaluate the lisp form (setf
+si:*kbd-auto-repeat-enabled-p* t) or add it as one of your
+login-forms.
+
+At the bottom of the Nuprl screen is a mouse documentation line which
+indicates some of the operations that can be performed with the mouse.
+Operations on windows are invoked via the window-operations menu
+(obtained by right-clicking the mouse).  The "snapshot" window
+operation appends a printout of the visible window contents to the
+current snapshot file.  The default for the current snapshot file is
+"snapshot.text" in the current user's home directory; to change the
+snapshot file, use the ML function "set_snapshot_file".  The left and
+middle buttons of the mouse can be used in place of the SEL (SELECT)
+and JUMP keys of the keypad (see page 43 of the book).  Thus
+mouse-left can be used for selecting a rule template to open and for
+selecting endpoints of chunks of text; and mouse-middle can be used
+for moving the text cursor about.  The middle and left buttons also
+have other uses, some of which are briefly described on the mouse
+documentation line.  See the "Changes to the User Interface" section
+of doc/changes for a description of all of these other uses.
+
+The special keys that involve CONTROL (e.g., ^U for erasing a line in
+the command window) are the same as described in the book, except that
+the SHOW PARENS feature (^W) is not implemented.  The CMD (command)
+key on the lisp machine is TAB, and the DEL (delete) key is RUBOUT.
+
+The special printing characters (obtained via the SYMBOL key) can be
+used in Nuprl, but they should only be used on the left hand sides of
+the templates in Nuprl definitions.  Type symbol-HELP to see a list of
+these special characters.
+
+On a Symbolics Lisp Machine, to load Nuprl enter the command "Load
+System Nuprl" in a Lisp Listener.  (For this to work, the appropriate
+files must have been installed in your sys:site directory -- see the
+document installing-nuprl.)  This will load the Nuprl system together
+with a collection of tactics.  Once the loading has completed, invoke
+Nuprl by entering the command "Nuprl".  This command takes some
+optional arguments which permit changes to the style of characters
+that Nuprl uses.  Once the command has been entered, the Nuprl screen
+will be selected.  After this, to return to this screen type SELECT U.
+
+
+A Nuprl command has been added to the Lisp Listener in the Symbolics
+implementation of Nuprl.  To invoke Nuprl on a Symbolics, just type
+"Nuprl".  There are four optional keyword arguments (typing:
+"Nuprl<SPACE><HELP>" gets documentation on them):
+
+:Character Size -- Supply after this one of the keywords :very-small,
+:small, :normal, :large, or :very-large.
+
+:Character Face, :Heading Character Face -- Supply one of :roman, :bold,
+:bold-italic, or :italic.
+
+When Nuprl is invoked via just "Nuprl", the choice of set rules and
+character styles remain as they were the last time Nuprl was invoked;
+or, if it is being invoked for the first time, the default is to use
+the new set rules, the :normal character size, and :roman typeface.
+The size :very-large is good for demos.
+
+Nuprl allows the use of special printing characters (such as the
+symbol for universal quantification).  On the Symbolics, these
+characters are entered via the SYMBOL key; do SYMBOL-HELP to get a
+list of the available characters.
+
+set_output_for_latexize(flag: bool) : void.  This function has no
+effect on a Symbolics machine.
+
+set_nuprl_path_prefix(pathname: tok): void.  The initial value is
+`nuprl:` if Nuprl is running on a Symbolics machine.
+
+complete_nuprl_path(directories: tok list; file_name: tok): tok.  Make
+a complete pathname from the current "nuprl path prefix", directories,
+and file_name.  Suppose the directories are [d1;...;dn], and suppose
+the current path prefix is P.  If Nuprl is running on a Symbolics
+machine, then the result is Pd1;...;dn;file_name.
+
+ML: Lisp Listener command.  Invokes a read-eval-print loop like that
+of the Lisp Listener.  In particular, the loop has similar
+input-editing facilities (such as history and line editing).  Enter ML
+forms without ";;", terminating them with the END key.  Use ABORT to
+quit.  WARNING: ML does not support concurrent execution.  For
+example, evaluating an ML form in the ML loop while a proof is
+expanding in Nuprl will almost certainly break something.
+

@@ -1,0 +1,244 @@
+			 INSTALLING NUPRL 3.2
+			 ====================
+
+
+
+The tape contains the complete set of sources for the Nuprl system
+together with some documentation and some example libraries.  Binaries
+are not included.  The tape is in "tar" format.  (If you asked for the
+Symbolics version then the tape is a cartridge in Symbolics' "carry"
+format.)
+
+The tape contains a single directory tree with root directory "nuprl".
+The directories loaded from tape should not be renamed (but new
+directories and files may be added).
+
+Directly under the root is a directory "doc" which contains
+documentation on Nuprl 3.2.  In particular, there is a reference
+manual in "refman" (latex, dvi and postscript versions), and other
+files which are described in the manual.
+
+If you have problems installing the system, you can contact the Nuprl 
+Group via e-mail (internet address: nuprlbugs@cs.cornell.edu).  Reports
+of bugs or other problems will also be accepted, although we cannot
+guarantee a prompt response.
+
+If this copy of Nuprl is free of charge, and if the tape is a
+cartridge, then we would appreciate it if you would mail the cartridge
+back to us when you have finished with it.
+
+The following instructions apply to Unix machines.  At the end of this
+document is the procedure for Symbolics machines.
+
+
+Loading the tape
+----------------
+
+Read the tape (using, e.g. "tar xf").  If the tape is a reel, then it
+was written at 1600bpi.  The root of the resulting directory tree will
+be referred to as "nuprl".  This tree will require about 20MB of
+storage when the system is compiled; much of this is due to the
+collection of Cornell libraries that we have included and which can be
+deleted if desired.
+
+
+Site initializations
+--------------------
+
+You must edit the file nuprl/sys/defsystem.lisp.  First, change the
+initial value of the global variable *nuprl-path-prefix* to the Nuprl
+root directory.  For example, if the root directory is
+/usr/fsys/myhost/nuprl replace the existing string by
+"/usr/fsys/myhost/nuprl" (note the trailing "/").  The new string must
+be an explicit pathname, not containing "." or "..".
+
+You will also need to edit the definition of the variable
+*bin-file-extension*.  Replace "sbin" by the filename extension
+strings used by your Common Lisp ("sbin" is used by the Sparcstation
+version of Sun (Lucid) Common Lisp).
+
+
+CLX
+---
+
+Nuprl requires CLX, the Common Lisp interface to X-windows.  (It
+is also possible to use an interface to the old SunView window system
+--- to use this, skip this step).  It is possible that the Lisp image
+you use already contains CLX.  You can check this by looking at the
+value of the *features* variable in Lisp (just evaluate "*features*").
+If the keyword :xlib is in the *features* list then CLX is already
+loaded.  Even if it is not loaded, your Common Lisp may have been
+distributed with its own version of CLX; if so, load it.
+
+If you do not have CLX, you can use the version of CLX in nuprl/clx.
+If you are using Allegro Common Lisp, see the file clx/exclREADME for
+instructions on compiling CLX.  To compile (and load) CLX in Lucid,
+evaluate the following forms (Lisp's working directory must be nuprl).
+
+(load "sys/defsystem.lisp") ; this sets the compiler options (Lucid and Allegro).
+                            ; ".lisp" is required only when loading this file.
+(cd "clx")
+(load "defsystem")
+(xlib:compile-clx)
+(cd "..")
+
+Once compiled, CLX can be loaded by replacing compile-clx with
+load-clx.  The function cd above is particular to Lucid.  In Allegro,
+use chdir, and in AKCL use system:chdir.
+
+
+Compiling and Loading Nuprl
+---------------------------
+
+Once CLX had been loaded, Nuprl can be compiled with the following
+(assuming the working directory is nuprl)
+
+(load "sys/defsystem.lisp")
+(in-package "NUPRL")
+(compile-nuprl)
+
+The first of these may be skipped if Nuprl's defsystem has already
+been loaded.  Compiling Nuprl may generate many compiler warnings;
+ignore these.  Once compiled, Nuprl can be loaded by replacing
+compile-nuprl with load-nuprl.  Also, the working directory need not
+be nuprl, as long as the file argument in the first line above is
+appropriately modified.
+
+Compiling (or loading) also compiles (or loads) the set of ML files
+that constitute Nuprl's tactic collection.  Compiling these files
+takes a long time and consumes a lot of memory.  It is possible to run
+Nuprl without these files.  To skip compiling (loading) them give an
+argument nil to compile-nuprl (load-nuprl).
+
+Because of the space required to compile the ML files, you may need to
+increase the size of Lisp's working space.  Our version of Lucid
+Common Lisp will crash if this is not done, so we evaluate
+
+(user::change-memory-management :growth-limit 1500 :expand 400)
+
+before compiling.  We have not needed to do this for Allegro or AKCL.
+
+
+Invoking Nuprl
+--------------
+
+Once Nuprl has been loaded, it can be invoked with
+
+(nuprl "<host>")
+
+where <host> is the name of the machine on which Nuprl's windows are
+to appear.  (If you are using the SunView interface, then the host
+argument should be omitted.)  Note that if <host> is different than
+the machine <host'> on which Lisp is running, you might need to add
+<host'> to the access control list of <host>.  This can be done by
+executing the Unix command xhost +<host'> on <host>.
+
+For Sun OpenWindows users: you may have to use the -noauth argument to
+the openwin command when starting the OpenWindows server. It has been
+our experience that the server will refuse clx client connection
+requests unless -noauth is specified.
+
+If the Lisp debugger is entered shortly after invoking Nuprl, then the
+likely cause is either that access permission was not given, or some
+X-window related customization was incorrectly done in the init file
+(e.g. a nonexistant color was requested).
+
+
+Installing Fonts
+----------------
+
+The directory sys/x-fonts contains sets of special font files.  You do
+not need these fonts to run Nuprl, but you will need them if you want
+to view most of the Nuprl libraries included with the distribution, or
+if you want to use certain special mathematical symbols in your
+definitions.  The directory nuprl/sys/x-fonts/bdf contains the
+distribution format files for these fonts which you can compile for
+your particular machine.
+
+The x-fonts directory contains subdirectories of compiled fonts for
+several of the more common workstations (including Decstations and
+Sparcstations).  See the file x-fonts/README.text for a complete
+listing.
+
+To compile fonts for your machine, create a new subdirectory of
+sys/x-fonts, copy the bdf files there, compile them with the font
+compiler and then run the program that makes a font directory.  (On
+Sparcstations, for example, these programs are called bdftosnf and
+mkfontdir, respectively).
+
+To make Nuprl use the fonts, add forms in your init file to update the
+font path of the X-window server, and to change Nuprl's font option.
+See the reference manual for more on this.  Also, the file
+sys/sample-nuprl-init-for-x.lisp gives an example of how to do this.
+
+
+
+Installing Nuprl 3.2 on a Symbolics Lisp Machine
+------------------------------------------------
+
+The remainder of this document applies only to Symbolics Lisp
+Machines.  The first part of these instructions is for tapes in
+"carry" format; the last two paragraphs concern what to do after the
+tape has been loaded.
+
+Evaluate the form (tape:carry-load) to load the tape.  For each
+directory dumped to the tape (and there are quite a few---sorry!), you
+will be queried for a target directory.  To the second query for any one
+directory you can answer "A" to have all subsequent files from that
+directory put in the same directory as the first file.
+
+The pathname of each dumped file starts with a prefix of the form
+"[...]nuprl".  You can map this prefix to anything, but the rest of each
+pathname must remain the same.  For example, if nuprl is to reside in
+the local directory "local:>nuprl>", then the dumped file
+"[...]nuprl>sys>nuprl.translations" should be written to
+"local:>nuprl>sys>nuprl.translations".
+
+The files nuprl.translations and nuprl.system in the sys directory
+should be copied to your "sys:site;" directory.  The
+"nuprl.translations" file must be edited to reflect the new physical
+location of the system.
+
+The system can be compiled and loaded in the usual way (using the
+Compile System and Load System commands).  To invoke Nuprl, use the
+command "Nuprl".  Using Compile System will not compile the ML files
+of Nuprl's tactic collection.  To do this, first compile the system.
+Compiling or loading when the tactics have not been compiled will
+invoke loading of the uncompiled ML files; when this is started an
+appropriate message is printed out and you can abort at this point.
+Once the system is loaded, evaluate the lisp form
+
+(ml-load nil "nuprl:ml;compile")
+
+or, alternatively, get into the ML top-loop in Nuprl's command window
+and enter 
+
+load `nuprl:ml;compile` false;;
+
+If don't want to use the Symbolics commands for loading a system, then
+before loading (or compiling) you need to load the file nuprl.translations
+from the sys directory.  Then, to compile Nuprl, evaluate the following.
+
+(load "sys/defsystem")
+(in-package 'nuprl)
+(compile-nuprl)
+
+This will also compile a collection of ML files.  You can skip the
+compilation of the ML files (which takes a while) by giving
+compile-nuprl the argument nil.  You likely want to compile them,
+though, since they contain Nuprl's basic tactic collection, and
+loading the files directly takes almost as much time as compiling
+them.
+
+To load Nuprl (assuming it is compiled), proceed as for compiling,
+except substitute the form "(load-nuprl)" for "(compile-nuprl)" This
+will also load the ML files; to skip this, give load-nuprl the
+argument nil.
+
+
+To invoke nuprl, evaluate the following :
+
+(nuprl)
+
+
+

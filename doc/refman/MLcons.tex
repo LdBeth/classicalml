@@ -1,0 +1,529 @@
+\chapter{Basic ML Constructors and Destructors}
+
+\label{MLExts}
+
+In what follows, all universe levels must be strictly positive.  Unless
+otherwise stated the tokens {\tt `nil`} and {\tt `NIL`} may be used as
+identifiers to indicate that no identifier should label the new hypothesis.
+
+
+\section{Rule Constructors}
+The constructors are categorized
+in the same manner as the rules.
+Each constructor is presented in the form
+\mbox{\tt constructor\_name(parameter names): type} where \tid{type} is the
+type of the constructor.  The parameter names are given only to indicate the
+correspondence between the constructor arguments and the components of the
+rule.
+Following are some conventions regarding the parameter names we use.
+\begin{itemize}
+\item{\tt hyp:int} is used to indicate a hypothesis.
+\item{\tt where:int} is used to indicate which equand of an equality should be
+reduced in a computation rule.
+\item{\tt level:int} is used to give a universe level.
+\item{\tt using:term} is used to indicate a using term.
+\item{\tt over\_id:tok, over:term} are used to indicate an over term.
+If the {\tt over\_id} is the token {\tt `nil`}, the over term is ignored.
+\end{itemize}
+All parameters corresponding to new identifiers have the same names as the
+new names given in the corresponding rule, and should be ML tokens.
+To specify the default identifier for an optional new identifier, give the
+token {\tt `nil`}.
+
+Unlike the rules, each constructor needs a unique name.
+The general form of the names is {\em base-type}\_{\em kind}\_{\em
+qualifier}, where {\em base-type} is a prl type and {\em kind} is one of
+{\tt intro}, {\tt elim}, {\tt equality}, {\tt formation} or {\tt
+computation}.
+So, for example, {\tt list\_equality\_nil} is the name of the constructor for
+the rule which specifies how to show two {\tt nil} terms are the same in a
+{\tt list} type, and {\tt int\_elim} is the name of the constructor for the elim
+rule for integers.
+There are some exceptions to this general pattern, the main one being that
+the name of the constructor for the rule for showing two canonical type
+terms to be equal in some universe is {\em type}{\tt \_equality} rather than
+{\tt universe\_equality\_}{\em type}.
+
+
+\subsection*{Atom}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_atom: rule}
+
+\uglymanentry{atom\_equality: rule}
+
+\subsubsection*{canonical}
+\uglymanentry{atom\_intro(token): term -> rule}
+
+\uglymanentry{atom\_equality\_token: rule}
+
+\subsubsection*{equality}
+\uglymanentry{atom\_eq\_equality: rule}
+
+\subsubsection*{computation}
+\uglymanentry{atom\_eq\_computation(where): int -> rule}
+
+
+
+\subsection*{Void}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_void: rule}
+
+\uglymanentry{void\_equality: rule}
+
+\subsubsection*{noncanonical}
+\uglymanentry{void\_elim(hyp): int -> rule}
+
+\uglymanentry{void\_equality\_any: rule}
+
+
+
+\subsection*{Int}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_integer: rule}
+
+\uglymanentry{int\_equality: rule}
+
+\subsubsection*{canonical}
+\uglymanentry{integer\_intro\_integer(c): int -> rule}
+
+\uglymanentry{integer\_equality\_natural\_number: rule}
+
+\subsubsection*{noncanonical}
+\uglymanentry{integer\_intro\_addition: rule}
+
+\uglymanentry{integer\_intro\_subtraction: rule}
+
+\uglymanentry{integer\_intro\_multiplication: rule}
+
+\uglymanentry{integer\_intro\_division: rule}
+
+\uglymanentry{integer\_intro\_modulo: rule}
+
+\uglymanentry{integer\_equality\_minus: rule}
+
+\uglymanentry{integer\_equality\_addition: rule}
+
+\uglymanentry{integer\_equality\_subtraction: rule}
+
+\uglymanentry{integer\_equality\_multiplication: rule}
+
+\uglymanentry{integer\_equality\_division: rule}
+
+\uglymanentry{integer\_equality\_modulo: rule}
+
+\uglymanentry{integer\_elim(hyp y z): int -> tok -> tok -> rule}
+
+\uglymanentry{integer\_equality\_induction(over\_id over u v):
+tok -> term -> tok -> tok -> rule}
+
+\subsubsection*{equality}
+\uglymanentry{int\_eq\_equality: rule}
+
+\uglymanentry{int\_less\_equality: rule}
+
+
+\subsubsection*{computation}
+\uglymanentry{integer\_computation(kind where): tok -> int -> rule}
+where kind should be one of `UP`, `BASE` or `DOWN`.
+
+\uglymanentry{int\_eq\_computation(where): int -> rule}
+
+\uglymanentry{int\_less\_computation(where): int -> rule}
+
+
+
+\subsection*{Less}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_less: rule}
+
+\uglymanentry{less\_equality: rule}
+
+\subsubsection*{equality}
+\uglymanentry{axiom\_equality\_less: rule}
+
+
+
+\subsection*{List}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_list: rule}
+
+\uglymanentry{list\_equality(level): int -> rule}
+
+\subsubsection*{canonical}
+\uglymanentry{list\_intro\_nil(level): int -> rule}
+
+\uglymanentry{list\_equality\_nil(level): int -> rule}  
+
+
+\uglymanentry{list\_intro\_cons: rule}
+
+\uglymanentry{list\_equality\_cons: rule}
+
+\subsubsection*{noncanonical}
+\uglymanentry{list\_elim (hyp u v w):
+   int -> tok -> tok -> tok -> rule}
+
+\uglymanentry{list\_equality\_induction (over\_id over using u v w): 
+tok -> term -> term -> tok -> tok -> tok -> rule}
+
+\subsubsection*{computation}
+\uglymanentry{list\_computation(where): int -> rule}
+
+
+
+\subsection*{Union}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_union: rule}
+
+\uglymanentry{union\_equality: rule}
+
+\subsubsection*{canonical}
+\uglymanentry{union\_intro\_left(level): int -> rule}
+
+\uglymanentry{union\_equality\_inl(level): int -> rule}
+
+
+\uglymanentry{union\_intro\_right(level): int -> rule}
+
+\uglymanentry{union\_equality\_inr(level): int -> rule}
+
+\subsubsection*{noncanonical}
+\uglymanentry{union\_elim(hyp x y): int -> tok -> tok -> rule}
+
+\uglymanentry{union\_equality\_decide(over\_id over using u v):
+tok -> term -> term -> tok -> tok -> rule}
+
+\subsubsection*{computation}
+\uglymanentry{union\_computation(where): int -> rule}
+
+
+
+\subsection*{Function}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_function(x term): tok -> term -> rule}
+
+\uglymanentry{function\_equality(y): tok -> rule}
+
+\uglymanentry{universe\_intro\_function\_independent: rule}
+
+\uglymanentry{function\_equality\_independent: rule}
+
+\subsubsection*{canonical}
+\uglymanentry{function\_intro(level y): int -> tok -> rule}
+
+\uglymanentry{function\_equality\_lambda(level z): int -> tok -> rule}
+
+\subsubsection*{noncanonical}
+\uglymanentry{function\_elim(hyp on y): int -> term -> tok
+-> rule}
+
+\uglymanentry{function\_elim\_independent(hyp y): int -> tok -> rule}
+
+\uglymanentry{function\_equality\_apply(using):  term -> rule}
+
+\subsubsection*{equality}
+\uglymanentry{extensionality(y): tok -> rule}
+
+\subsubsection*{computation}
+\uglymanentry{function\_computation(where): int -> rule}
+
+
+
+\subsection*{Product}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_product(x left\_term): tok -> term -> rule}
+
+\uglymanentry{product\_equality(y): tok -> rule}
+
+\uglymanentry{universe\_intro\_product\_independent: rule}
+
+\uglymanentry{product\_equality\_independent: rule}
+
+\subsubsection*{canonical}
+\uglymanentry{product\_intro\_dependent(left\_term level y): term -> int -> 
+tok -> rule}
+
+\uglymanentry{product\_equality\_pair(level y): int -> tok -> rule}
+
+\uglymanentry{product\_intro: rule}
+
+\uglymanentry{product\_equality\_pair\_independent: rule}
+
+\subsubsection*{noncanonical}
+\uglymanentry{product\_elim(hyp u v): int -> tok -> tok -> rule}
+
+\uglymanentry{product\_equality\_spread(over\_id over using u v):
+tok -> term -> term -> tok -> tok -> rule}
+
+\subsubsection*{computation}
+\uglymanentry{product\_computation(where): int -> rule}
+
+
+
+\subsection*{Quotient}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_quotient(A E x y z): term -> 
+term -> tok -> tok -> tok -> rule}
+
+\uglymanentry{quotient\_formation(x y z): tok -> tok -> tok -> rule}
+
+
+\subsubsection*{canonical}
+\uglymanentry{quotient\_intro(level): int -> rule}
+
+\uglymanentry{quotient\_equality\_element(level): int -> rule}
+
+\subsubsection*{noncanonical}
+\uglymanentry{quotient\_elim (hyp level v w): int -> int -> tok -> 
+tok -> rule}
+
+\subsubsection*{equality}
+\uglymanentry{quotient\_equality(r s): tok  -> tok -> \ rule} 
+
+\uglymanentry{quotient\_equality\_element(level): int  -> rule}
+
+
+
+\subsection*{Set}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_set(x type): tok -> term -> rule}
+
+\uglymanentry{set\_formation(y): tok -> rule}
+
+\uglymanentry{universe\_intro\_set\_independent: rule}
+
+\uglymanentry{set\_formation\_independent: rule}
+
+\subsubsection*{canonical}
+\uglymanentry{set\_intro(level left\_term y): int -> term -> tok -> rule}
+
+\uglymanentry{set\_equality\_element(level y): int -> tok -> rule}
+
+\uglymanentry{set\_intro\_independent: rule} 
+
+
+\uglymanentry{set\_equality\_element: rule}
+
+\subsubsection*{noncanonical}
+\uglymanentry{set\_elim(hyp level y): int -> int -> tok -> rule}
+
+\subsubsection*{equality}
+\uglymanentry{set\_equality(z): tok -> rule}
+
+
+
+\subsection*{Equality}
+\subsubsection*{formation}
+\uglymanentry{universe\_intro\_equality(type number\_terms): term -> int -> rule}
+
+\uglymanentry{equal\_equality: rule}
+
+\subsubsection*{canonical}
+\uglymanentry{axiom\_equality\_equal: rule}
+
+\uglymanentry{equal\_equality\_variable: rule}
+
+
+
+\subsection*{Universe}
+\subsubsection*{canonical}
+\uglymanentry{universe\_intro\_universe (level): int -> rule}
+
+\uglymanentry{universe\_equality: rule}
+
+\subsection*{Tactic}
+\uglymanentry{tactic(text): tok -> rule}
+
+
+\subsection*{Miscellaneous}
+\subsubsection*{hypothesis}
+\uglymanentry{hyp(hyp): int -> rule}
+
+\subsubsection*{thinning}
+\uglymanentry{thinning(hyp\_num\_list): int list \map rule}
+
+\subsubsection*{sequence}
+\uglymanentry{seq(term\_list id\_list): (term list) -> (tok list) -> rule}
+The length of the token list should match the length of the term list.
+
+\subsubsection*{lemma}
+\uglymanentry{lemma(lemma\_name x): tok -> tok -> rule}
+
+\subsubsection*{def}
+\uglymanentry{def(theorem x): tok -> tok -> rule}
+
+\subsubsection*{explicit intro}
+\uglymanentry{explicit\_intro(term): term -> rule} 
+
+\subsubsection*{cumulativity}
+\uglymanentry{cumulativity(level): int -> rule}
+
+\subsubsection*{substitution}
+\uglymanentry{substitution(level equality\_term over\_id over):
+int -> term -> tok -> term -> rule}
+
+\subsubsection*{direct computation}
+\uglymanentry{direct\_computation(tagged\_term): term -> rule}
+
+\uglymanentry{direct\_computation\_hyp(hyp tagged\_term):
+int -> term -> rule}
+
+\uglymanentry{reverse\_direct\_computation(tagged\_term): term -> rule}
+
+\uglymanentry{reverse\_direct\_computation\_hyp(hyp tagged\_term):
+int -> term -> rule}
+
+\subsubsection*{equality}
+\uglymanentry{equality: rule}
+
+\subsubsection*{arith}
+\uglymanentry{arith(level): int -> rule}
+
+\subsubsection*{monotonicity}
+\uglymanentry{monotonicity(op hyp1 hyp2): tok -> int -> int -> rule}
+
+\subsubsection*{division}
+\uglymanentry{division: rule}
+
+\section{Term Destructors}
+
+Below are the term destructors and their types.
+
+\uglymanentry{destruct\_universe: term -> int} 
+The integer is the universe
+level.
+
+\uglymanentry{destruct\_any: term -> term} 
+
+
+\uglymanentry{destruct\_token: term -> tok} 
+
+
+\uglymanentry{destruct\_natural\_number: term -> int} 
+
+
+\uglymanentry{destruct\_minus: term -> term} 
+
+
+\uglymanentry{destruct\_addition: term -> (term \#\ term)}
+ The results are
+the left and right terms.
+
+\uglymanentry{destruct\_subtraction: term -> (term \#\ term)} 
+
+
+\uglymanentry{destruct\_multiplication: term -> (term \#\ term)} 
+
+
+\uglymanentry{destruct\_division: term -> (term \#\ term)} 
+
+
+\uglymanentry{destruct\_modulo: term -> (term \#\ term)} 
+
+
+\uglymanentry{destruct\_integer\_induction: term -> (term \#\ term \#\ term \#\
+term)}
+The results are the value, down term, base term and up term.
+
+\uglymanentry{destruct\_list: term -> term} 
+ Returns the type of the list.
+
+\uglymanentry{destruct\_cons: term -> (term \#\ term)} 
+ Returns the head and
+tail.
+
+\uglymanentry{destruct\_list\_induction: term -> (term \#\ term \#\ term)}
+Returns the value, base term and up term.
+
+\uglymanentry{destruct\_union: term -> (term \#\ term)}
+ Results in the left
+and right types.
+
+\uglymanentry{destruct\_inl: term -> term} 
+
+
+\uglymanentry{destruct\_inr: term -> term} 
+
+
+\uglymanentry{destruct\_decide: term -> (term \#\ term \#\ term)}
+  The result
+is the value, the left term and the right term.
+
+\uglymanentry{destruct\_product: term -> (tok \#\  term \#\ term)}
+ The result
+is the bound identifier, the left term and the right term.
+
+\uglymanentry{destruct\_pair: term -> (term \#\ term)}
+ Returns the left term
+and the right term.
+
+\uglymanentry{destruct\_spread: term -> (term \#\ term)}
+ Returns the value
+and the term.
+
+\uglymanentry{destruct\_function: term -> (tok \#\ (term \#\ term))}
+ The
+result is the bound identifier, the left term and the right term.
+
+\uglymanentry{destruct\_lambda: term -> (tok \#\ term)}
+  Returns the
+bound identifier and the term.
+
+\uglymanentry{destruct\_apply: term -> (term \#\ term)}
+  Returns the
+function and the argument.
+
+\uglymanentry{destruct\_quotient: term -> (tok \#\ (tok \#\ (term \#\ term)))}
+Returns the two bound identifiers, the left type and the right type.
+
+\uglymanentry{destruct\_set: term -> (tok \#\ (term \#\ term))}
+  Returns the
+bound identifier, the left type and the right type.
+
+\uglymanentry{destruct\_var: term -> tok} 
+
+
+\uglymanentry{destruct\_equal: term -> ((term list) \#\ term)}
+ Returns a list
+of the equal terms and the type of the equality.
+
+\uglymanentry{destruct\_less: term -> (term \#\ term))}
+ Returns the
+left term and the right term.
+
+\uglymanentry{destruct\_bound\_id: term -> ((tok list) \#\ term)}
+ Returns a
+list of the bound identifiers and the type.
+
+\uglymanentry{destruct\_term\_of\_theorem: term -> tok}
+ Returns the name of the
+theorem.
+
+\uglymanentry{destruct\_atomeq: term -> (term \#\ (term \#\ (term \#\ term)))}
+Returns the left term, right term, if term and else term.
+
+\uglymanentry{destruct\_inteq: term -> (term \#\ (term \#\ (term \#\ term)))}
+Returns the left term, right term, if term and else term.
+
+\uglymanentry{destruct\_intless: term -> (term \#\ (term \#\ (term \#\ term)))}
+Returns the left term, right term, if term and else term.
+
+\uglymanentry{destruct\_tagged: term -> (int \#\ term)}
+The integer returned is zero if the tag is {\tt *}.
+
+
+
+\section{Term Constructors}
+For each term type there is a corresponding constructor that is the
+curried inverse to the destructor given above.  For example,
+\begin{quote}
+{\tt make\_inteq\_term: term -> term -> term -> term -> term}.
+\end{quote}
+
+
+
+
+
+
+
+

@@ -1,0 +1,153 @@
+\chapter{``Experimental'' Types}
+
+\label{experimental-types}
+
+Nuprl has been extended with two new type constructors.  The first is the
+type of all canonical objects.  This type is not used in an essential way
+in any existing Nuprl libraries.  It is used only to support the
+``polymorphic'' style of definition described in the tactic documentation.
+It is a trivial matter to incorporate this type into the standard semantic
+account of Nuprl.
+
+The second type constructor is for recursive types.  This should be
+regarded as experimental since it has not been proven sound.  It is highly
+likely to be sound since it is a slight variant of one which has been
+rigorously verified.
+
+\section{The ``Object'' Type}
+\subsection*{formation}
+\goal >> object in \U{i}  BY intro
+
+\subsection*{canonical}
+\goalgroup >> $t$ in object  BY intro [using $A$]\\*
+\subgoal  [>> $t$ in $A$]
+
+
+\goalskip
+
+\goal >> $t$=$t'$ in object BY intro\\*
+\subgoal  >> $t$ in object\\*
+\subgoal  >> $t'$ in object
+\begin{quote}\rm
+where, in the second rule above, if $t$ 
+is canonical then no subgoal is generated, and
+if it is not canonical, then the ``using'' term must be present and the
+subgoal is generated.  There are no corresponding rules for $n$-ary
+equalities where $n>2$.
+\end{quote}
+
+\rm
+
+The related ML primitives are as follows.
+
+
+\manentry{object\_equality: rule}
+
+\manentry{object\_equality\_member(t:term): rule}
+
+\manentry{make\_object\_term: term}
+
+
+\section{Simple Recursive Types}
+
+The general form of the recursive type constructor presented in the book
+can be somewhat unwieldy in practice.  A simpler form has been
+implemented which does not allow mutual recursion or recursive
+definition of type-valued functions.
+
+The new terms are \tid{rec(Z.T)} and \tid{rec\_ind(r;h,z.t)}, 
+for \tid{h}, \tid{z}, \tid{Z} variables and
+\tid{r}, \tid{t}, \tid{T} terms.  
+When closed, \tid{rec(Z.T)} is canonical and \tid{rec\_ind(r;h,z.t)} is
+noncanonical.  The term \tid{rec\_ind(r;h,z.t)} is a redex with contracta
+\begin{quote}
+\tt t[r/z; $\backslash$z.  rec\_ind(z;h,z.t)/h].
+\end{quote}
+In the book there is a restriction
+that r must be canonical for the term to be a redex --- the implemented
+version has no such restriction, hence this \tid{rec\_ind} form has no
+principal argument.  The direct computation rules do, however, treat
+\tid{rec\_ind} redices as redices.
+
+The proof rules and ML primitives follow.
+
+
+\subsection*{Formation}
+
+\begin{verbatim}
+H >> rec(Z.T) in Ui by intro new Y
+Y:Ui >> T[Y/Z] in Ui
+\end{verbatim}
+where no instance of Z bound by rec(Z.T) may occur in the domain type of
+a function space, in the argument of a function application or in the
+principal argument(s) of a non-application elimination form.
+
+
+\subsection*{Canonical}                                            
+
+\begin{verbatim}
+H >> rec(Z.T) ext t by intro at Ui
+     >> T[rec(Z.T)/Z] ext t
+     >> rec(Z.T) in Ui
+
+H >> t in rec(Z.T) by intro at Ui
+    >> t in T[rec(Z.T)/Z]
+    >> rec(Z.T) in Ui
+\end{verbatim}
+
+\subsection*{Noncanonical}
+
+\begin{verbatim}
+H, x:rec(Z.T), H' >> G ext g[x/y]  by unroll x new y
+y:T[rec(Z.T)/Z], y=x in T[rec(Z.T)/Z] >> G[y/x] ext g
+                                                                             
+H, x:rec(Z.T), H' >> G ext rec\_ind(x;w,z.g[$\backslash$x.void/u]) 
+                                by elim x at Ui new u,v,w,z
+                     >> rec(Z.T) in Ui
+u: rec(Z.T)->Ui, w: (x:{v:rec(Z.T)|u(v)}->G), z: T[{v:rec(Z.T)|u(v)}/Z] 
+                     >> G[z/x] ext g 
+
+H >> rec\_ind(r;h,z.t) in S[r/x] 
+             by intro over x.S using rec(Z.T) at Ui new u,v,w
+       >> r in rec(Z.T)
+       >> rec(Z.T) in Ui
+u: rec(Z.T)->Ui, v: w:{w:rec(Z.T)|u(w)}->S[w/x], w: T[{w:rec(Z.T)|u(w)}/Z] 
+       >> t[v,w/h,z] in S[w/x]
+\end{verbatim}
+
+
+\subsection*{ML Primitives}
+
+The primitives are presented as in Appendix~\ref{MLExts}
+
+\uglymanentry{simple\_rec\_equality(y): tok -> rule}
+
+\uglymanentry{simple\_rec\_intro(level): int -> rule}
+
+\uglymanentry{simple\_rec\_equality\_element(level): int -> rule}
+
+\uglymanentry{simple\_rec\_unroll\_elim(level new\_ids): int -> tok list -> rule}
+
+\uglymanentry{simple\_rec\_elim(hyp\_num level new\_ids):  int -> int -> tok list
+-> rule}
+
+\uglymanentry{simple\_rec\_equality\_rec\_ind(level over\_id over using u v w):
+   int -> tok -> term -> term -> tok list ->  rule}
+
+\uglymanentry{destruct\_simple\_rec: term -> (tok \# term)}
+
+\uglymanentry{make\_simple\_rec\_term: tok -> term -> term}
+
+\uglymanentry{destruct\_simple\_rec\_ind: term -> (term \# term)}
+
+\uglymanentry{make\_simple\_rec\_ind\_term: term -> term -> term}
+
+
+
+
+
+
+
+
+
+

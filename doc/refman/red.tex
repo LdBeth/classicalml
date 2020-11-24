@@ -1,0 +1,292 @@
+\chapter{The Proof Editor}
+
+{}Nuprl proofs are sequent{} proofs organized
+in a refinement style.
+In other words they are trees where each node contains a {\em goal}{}
+and a {\em rule{} application}.
+The children of a node are the {\em subgoals}{}
+of their parent; in order to prove the parent it is sufficient to prove
+the children.
+(Nuprl automatically generates the children, given their parent and the rule
+to be applied; it is never necessary to type them in.)
+Not all goals have subgoals; for example, a goal proved by {\tt hyp}
+does not.
+Also, an {\em incomplete} goal (one whose rule is bad or missing) has no
+subgoals.
+
+In what follows the {\em main goal} ({\em the} goal for short)
+is the goal of the current node;
+{\em a} goal is either the main goal or one of its subgoals.
+
+\section{Basics of the Proof Editor}
+
+The proof{} editor, {\em red}{} (for
+{\em refinement{} editor}),
+is invoked when the {\tt view} command is given on a theorem object.
+The proof editor window always displays the {\em current node} of the proof.
+When the editor is first entered the current node is the root of the tree;
+in general, the current node can be changed by going into one of its subgoals
+or by going to its parent.
+For convenience there are also ways to jump to the next unproved leaf
+and to the root of the theorem.
+
+\begin{figure}
+\hrule
+\begin{center}
+\begin{tabular}{|l|}\hline
+\tt EDIT THM t \\ \hline
+\verb`* top 1 2                         `\\
+\verb`1. a:int                                                `\\
+\verb`>> b:int # ((a=b in int) | ((a=b in int) -> void)) in U1`\\
+\verb`                                                        `\\
+\verb`BY intro                                                `\\
+\verb`                                                        `\\
+\verb`1* >> int in U1                                       `\\
+\verb`                                                        `\\
+\verb`2* 2. b:int                                             `\\
+\verb`   >> ((a=b in int) | ((a=b in int) -> void))  in U1    `\\
+\nothing\\ \hline  
+\end{tabular}
+\end{center}
+\caption{A Sample Proof Editor Window}
+\vspace{2pt}
+\hrule
+\label{ch7 - A sample proof editor window}
+\end{figure}
+
+Figure \ref{ch7 - A sample proof editor window}
+shows a sample proof editor{} window.
+The numbers below refer to the lines of text in the window, starting
+with the line {\tt EDIT THM t}.
+%
+\begin {enumerate}
+\item
+    The header{} line names the theorem being edited, {\tt t}
+    in this case.
+
+\item
+    The {\em map}{}, {\tt top 1 2},
+    gives the path from the root to the current node.
+    (If the path is too long to fit on one line it is truncated on the left.)
+    The displayed node is the second child of the first child of the root.
+
+\item The goal's first (and only) hypothesis{}, {\tt a:int},
+    appears under the map.
+
+\item
+    The conclusion{} of the goal is the formula to be proved,
+    given the hypotheses.
+    The conclusion is shown to the right of the the sequent arrow, {\tt >>}.
+    In the example it is
+\begin{verbatim}
+      b:int # ((a=b in int)|((a=b in int) -> void)) in U1.
+\end{verbatim}
+
+\item
+    The {\em rule}{} specifies how to refine the goal.
+    In the example the {\tt intro} rule is used to specify
+    {\em product introduction}, since the main connective of the conclusion is
+    the product operator, {\tt \#}.
+
+\item
+    The first subgoal has one hypothesis, {\tt a:int}, which is not
+    displayed since it already occurs as a hypothesis of the main goal, and
+    the conclusion {\tt int in U1}.
+
+\item
+    The second subgoal has two hypotheses, {\tt a:int} and {\tt b:int}, the
+    first of which is not displayed,
+    and the conclusion
+\begin{verbatim}
+        ((a=b in int) | ((a=b in int) -> void)) in U1.
+\end{verbatim}
+\end {enumerate}
+
+Notice that lines (2), (6) and (7) have asterisks, which serve as
+{\em status{} indicators}.
+The asterisk in line (2) means that this entire subgoal has the status
+{\em complete};
+similarly, the asterisks in lines (6) and (7) mean that the two subgoals
+also are {\em complete}.
+Other status indicators are {\tt \#} (incomplete), {\tt -} (bad), and {\tt ?}
+(raw).
+
+\section{Motion within a Proof Node}
+
+{}{}We first make the following definitions.
+The proof{} cursor is {\em in} a goal if it
+points to a hypothesis or the
+conclusion;
+it is {\em at} a goal if it points to the first part of the goal.
+If the cursor is not in a goal, it is {\em at} the rule of the current node
+or {\em in} or {\em at} a subgoal.
+
+The cursor can be moved around within
+the current proof node in the following ways:
+\begin {description}
+\item[\UP{}, \DOWN{}]{} \hfill \break
+\noindent
+    Moves the cursor up or down to the next or previous minor stopping point.
+    A minor stopping point is an assumption, a conclusion or the rule.
+
+\item[\LONG{} \UP{}, \LONG{} \DOWN{}]{} \hfill \break
+\noindent
+    Moves the cursor up or down to the next or previous major stopping point.
+    A major stopping point is a subgoal, a rule or the goal.
+
+\item[\LONG{} \LONG{} \UP{}]{} \hfill \break
+\noindent
+    Moves the cursor to the goal.
+
+\item[\LONG{} \LONG{} \DOWN{}]{} \hfill \break
+\noindent
+Moves the cursor to the conclusion of the last subgoal.
+\end {description}
+
+\section{Motion within the Proof Tree}
+
+{} The following commands allow one to move around within the proof.  They
+change the current node by moving into or out of subproofs.  It is helpful,
+in memorizing these commands, to think of the proof tree as lying on its
+side, having children of a node layed out vertically with the first child
+level with its parent.
+%
+\begin {description}
+\item [\RIGHT{}] \hfill \break
+\noindent
+    Only has an effect when the cursor is in a subgoal;
+    the node for that subgoal becomes the current node.
+
+\item [\LEFT{}] \hfill \break
+\noindent
+    Sets the current node to be the parent of the current node.
+    The cursor will still point to the current goal, but the current goal
+    will be displayed as one of the subgoals of the parent.
+
+\item [\DIAG{}] \hfill \break
+    If the cursor is not in the goal \DIAG{} moves it to point to
+    the goal.  If it {\em is} in the goal, the parent of the current node will
+    become the new current node, (as in \LEFT{}) and the cursor will point to
+    its goal (unlike \LEFT{}).
+
+\item[\LONG{} \DIAG{}]{} \hfill \break
+\noindent
+    Has the same effect as four \DIAG{}s.
+
+\item[\LONG{} \LONG{} \DIAG{}]{} \hfill \break
+\noindent
+    Sets the current node to be the root of the proof.
+    The cursor will point to the environment of its goal.
+
+\item[\LONG{} \RIGHT{}]{} \hfill \break
+    Sets the current node to be the next unproved node of the proof tree.
+    The search is done in preorder and wraps around the tree if necessary.
+    If the proof has no incomplete nodes the current node is set to be the
+    root.
+\end {description}
+%
+Any other combination of \LONG{} and the arrow keys is ignored.
+Extra \LONG{}s are ignored.
+
+The cursor may also be moved within a single window by pointing at the
+desired location and clicking mouse-\JUMP.  However, note that scrolling
+the contents of the window cannot be done just with the mouse.  Pointing at
+a non-active window and clicking mouse-\JUMP\ will make the window active
+(but leave the cursor where it was when the window was last active).
+
+
+\section{Initiating a Refinement}
+
+To refine a goal, a refinement rule must be supplied.
+To do this, first move the cursor to point to the rule of the current node
+and press \SEL{};
+this will bring up an instance of the text editor in a window labeled
+{\tt EDIT rule of {\it thmname}}.
+Type the rule into this window and press \EXIT.
+\prl{} will parse the rule and try to apply it to the goal of the current proof
+tree node.
+If it succeeds the proof window will be redrawn with new statuses and
+subgoals as necessary.
+If it fails then one of two things may happen.
+If the error is severe, the status of the node (and the proof) will be set to
+{\em bad}, an error message will appear in the command/status window,
+and the rule will be set to {\tt ??bad refinement rule??}.
+If the error is mild and due to a missing input,
+\prl{} will display a {\tt HELP} message in the command/status window
+and leave the rule window on the screen so that it can be fixed.
+
+If an existing rule is selected for editing \prl{} will copy it to the
+edit window.  If the text of the rule is changed, then when \EXIT\ is
+pressed \prl{} will again parse and refine the current goal.  When it
+does it will throw away any proofs for the children of the current
+node, even if they could have been applied to the new children of the
+current node.  On the other hand, if the text is has not been touched,
+then when \EXIT\ is pressed \prl{} will not reparse the rule.
+
+{\em Warning.} If the text has been touched at all, then, even if the
+text is {\em identical} to when the window was opened, the text will be
+reparsed and the entire subproof will be lost.
+
+\section{Showing Goals, Subgoals and Rules}
+
+{}In some circumstances it is convenient to be able to
+copy goals or subgoals into other proofs.
+This cannot be done directly, but there is a roundabout way.
+If \SEL{} is pressed while the cursor is in a goal Nuprl creates a read-only
+text window containing the text of the goal.
+The window will be labeled {\tt SHOW goal of {\it thmname}}.
+The copy mechanism of the text editor can then be used to copy
+portions of the goal to other windows.
+
+
+\section{Invoking Transformation Tactics}
+
+Transformation tactics are tactics which act as proof transformers
+rather than as generalized refinement rules.
+To invoke a transformation{} tactic,
+press \TRANSFORM.
+This will bring up a text edit window labelled
+{\tt Transformation Tactic}.
+Type the name of the tactic and any arguments into the window and press
+\EXIT;
+Nuprl will apply the tactic and redisplay the proof window to show any
+effects.
+If the tactic returns an error message it will be displayed in the
+command/status window.
+
+To apply a transformation tactic, the system proceed as with the
+tactic rule (see Section~\ref{tactic-rule}), with the following two
+differences.  First, the argument given to the tactic, instead of
+being a degenerate proof, is the entire proof tree $p$ rooted at the
+node to which the tactic is applied.  Second, the editor replaces $p$
+with the proof resulting from the application of the tactic.
+
+
+
+\section{The Autotactic}
+Nuprl provides the facility for
+a distinguished transformation tactic known as the {\em autotactic}.
+This tactic is invoked automatically on the results of each primitive
+refinement step.  After each primitive
+refinement performed in the refinement editor
+the autotactic is run on the subgoals as a transformation
+tactic.  There is a default autotactic, but any refinement or
+transformation tactic may be used.  For example, to set the autotactic to
+a transformation tactic called {\tt transform\_tac}, the following ML code
+is used:
+\begin{verbatim}
+        set_auto_tactic `transform_tac`;;
+\end{verbatim}
+This code could be used either in ML mode or placed
+in an ML object (and checked).  To see what the current autotactic is,
+type 
+\begin {verbatim}
+        show_auto_tactic ();;
+\end{verbatim}
+in ML mode.
+
+The autotactic is applied to subgoals of primitive refinements only when a
+proof is being edited.  When performing a library load or when using a
+tactic while editing a proof, the autotactic is inhibited.
+
+

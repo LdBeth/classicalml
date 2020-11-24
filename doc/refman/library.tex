@@ -1,0 +1,122 @@
+\chapter{The Library}
+
+The library{} is a list of all the objects defined by the user
+and includes
+theorems, definitions, evaluation bindings and ML code.
+The library{} window displays information about
+the various objects---
+their names, types, statuses and summary descriptions.
+In this section we give a short description of the
+different kinds of objects and their statuses.
+
+\section{Object Types}
+
+The library contains four kinds of objects: {} DEF, THM, EVAL and ML.\  DEF
+objects define new notations that can be used whenever text is being
+entered.  THM objects contain proofs in the form of proof trees.  Each node
+of the proof tree contains a number of assumptions, a conclusion, a
+refinement rule and a list of children produced by applying the refinement
+rule to the assumptions and conclusion.  THM objects are checked only when
+a check command is issued or they are viewed or are used as objects from which
+code is extracted.
+
+EVAL objects contain lists of bindings, where{} a binding has the form
+\({\tt let}\ {\it id}={\it term}\) and is terminated by a double semicolon,
+``{\tt ;;}''.  Checking an EVAL object adds its bindings to the evaluator{}
+environment so that they available to the {\tt eval}{} command.  All EVAL
+objects are checked when they are loaded into the library.  ML objects
+contain ML programs, including tactics, which provide a general way of
+combining the primitive refinement rules to form more powerful refinement
+rules.  Checking an ML object enriches the ML environment.  All ML objects
+are checked when they are loaded into the library.
+
+\section{Library Entries}
+
+Every object has associated with it a status{}{}, either {\em raw}{}, {\em
+bad}{}, {\em incomplete} {} or {\em complete}{}, indicating the current
+state of the object.  A {\em raw} status means an object has been changed
+but not yet checked.  A {\em bad} status means an object has been checked
+and found to contain errors.  An {\em incomplete} status is meaningful only
+for proofs and signifies that the proof contains no errors but has not been
+finished.  A {\em complete} status indicates that the object is correct and
+complete.
+
+An entry for an object in the library is displayed in the library window as
+a single line contains its kind, status, type, name and a summary of the
+contents.  The kind is \tid{D} for \id{definition}, \tid{t} and \tid{T} for
+\id{theorem}, \tid{M} for \id{ML}, \tid{E} for \id{evaluation}.  The lower
+case ``\tid{t}'' is used for theorems that have proofs in the compact
+representation used for storage in files; viewing or checking such an
+object will cause expansion of the proof, and this can be time consuming.
+The status is encoded as a single character: {\tt ?} for raw, {\tt -} for
+bad, {\tt \#} for incomplete and {\tt *} for complete.  A typical entry
+might be the following.
+\begin{center}
+\begin{tabular}{|l|}\hline\tt
+Library \\ \hline
+\tt *T simple\ \ \ >> int in U1\\
+\nothing\\ \hline  
+\end{tabular}
+\end{center}
+The library window provides the mechanism for viewing these entries.
+The entries are kept in a linear order, and at any one time a section of
+the entries is visible in the library window.  The library placement
+commands described above can be used to change the order of the
+entries and to move the window around within the list of entries.
+
+If mouse-\SEL\ is pressed when pointing at a library entry, the name of the
+entry is ``typed in'' by the system.  This works in the command window and in
+ted (the text editor).  So, for example, you can instantiate a definition by
+\INS, mouse-\SEL\ on library object, \CR.
+
+If mouse-\JUMP\ is pressed with the mouse above the first line in the
+library window, then the library scrolls up one page.  If it is pressed
+with the mouse just after the last line of the library window (but still in
+the window or on the bottom border) then the library scrolls down one page.
+Thus, you can scroll through the library using the mouse, instead of the
+scroll commands.
+
+If mouse-\JUMP\ is pressed with the mouse in the library scroll bar, then
+the library is scrolled to the specified point.  After the scroll, the
+scroll bar will indicate that the library is being shown from the point
+that the mouse selected.
+
+If mouse-\JUMP\ is pressed with the mouse on a library window line that
+displays a theorem object, then the name, goal, and extracted term (if
+available) will be displayed in the command window.  This allows you to see
+a theorem more fully, especially if it is too long to fit on one line of
+the library window.
+
+
+
+\section{Object Dependencies and Ordering}
+
+A correct library in Nuprl is one where every definition and theorem
+refer only to objects occurring previously in the library.
+Unfortunately, Nuprl does not guarantee that this property is
+maintained when commands are used that modify the library.  For
+example, it is possible to create a circular chain of lemma
+references.
+
+There is only one way to guarantee that a library (or sequence of
+libraries) is correct.  This is to load it (them, sequentially) into
+an empty library using the ``load fully'' command.  This will force a
+theorem's proof to be expanded before the theorem is loaded into the
+library, and so guarantee that proofs only reference theorems that
+occur previously in the library.
+
+Loading in the library into an empty library without using the
+``fully'' option, and then executing ``check first-last'', will {\em
+not} guarantee that the library is correct, since during the checking
+of a theorem, all later theorems will be present in the library and
+will retain the statuses they had when they were dumped.
+
+Nuprl does do some dependency checking with definitions.  For example,
+if a definition is deleted then the status of any entry depending on
+these objects is set to BAD.  
+
+Because of the general lack of dependency checking, a user must be
+careful to keep library objects correctly ordered or reloading may
+fail.  The {\tt move} command is often used to make sure that objects
+occur before their uses.
+

@@ -1,0 +1,279 @@
+\section{Terms and Evaluation}
+
+This documents the syntax and evaluation of the terms of Nuprl's type
+theory.  In giving the procedure for evaluation and specifying the
+refinement rules of the theory, we will use the following notation for
+substitution.  If $0\le n$, $x_1,\dots,x_n$ are variables and
+$t_1,\dots,t_n$ are terms then \[ t[t_1,\dots, t_n/x_1,\dots,x_n] \]
+is the result of simultaneously substituting $t_i$ for $x_i$.  
+
+Figure \ref{TermTable} shows the terms\index{terms}{} of \nprl{}. 
+Variables are terms, although since they are not closed they are not executable.
+Variables are written as identifiers, with
+distinct identifiers indicating distinct variables.\footnote{
+An identifier is any string of letters, digits, underscores or
+at--signs that starts with a letter.
+The only identifiers which cannot be used for variables are
+{\tt term\_of} and those which serve as operator names, such as
+{\tt int} or {\tt spread}.
+}
+Nonnegative integers are written
+in standard decimal notation.  There is
+no way to write a negative\index{negative integer}{}
+integer in \nprl{}; the best one can do is to write a noncanonical
+term, such as {\tt -5}, which evaluates to a negative integer.
+Atom constants are written as character strings enclosed in 
+double quotes, with distinct strings indicating distinct atom constants.
+\begin{figure}
+\hrule{}
+\vspace{2ex}
+\tt
+\newcommand{\parg}{{\tiny{$\wedge$}}}
+\newcommand{\bvx}{{\small{$x$}}}
+\newcommand{\bvy}{{\small{$y$}}}
+\newcommand{\bvu}{{\small{$u$}}}
+\newcommand{\bvv}{{\small{$v$}}}
+\newcommand{\wide}[1]{\multicolumn{2}{l}{#1}}
+\begin{minipage}{\hsize}
+\begin{tabbing}
+\hspace{1in} 	\= \hspace{1in}	\= \hspace{1in}	\=		\kill
+$x$		\> $n$		\> $i$		\> void		\\[1ex]
+int		\> atom		\> axiom	\> nil		\\[1ex] 
+U$k$		\> inl($a$)	\> inr($a$)	\> $A$ list	\\[1ex] 
+\= \= \hspace{1in}
+		\= \hspace{1in}	\= \hspace{1in}	\=		\kill
+\verb+\+\= $x$.\= $b$
+		\> $a$<$b$	\> <$a$,$b$>	\> $a$.$b$	\\[-.6ex]
+	\> \bvx	\> \bvx						\\[1ex] 
+\hspace{1in} 	\= \= \hspace{1in}
+				\= \hspace{1in}	\= \= 
+							\kill
+$A$\#$B$	\> $x$:$A$\#\= $B$
+				\> $A$->$B$	\> $x$:$A$->\= $B$
+								\\[-.6ex]
+		\> \bvx	    \> \bvx
+				\>		\> \bvx	    \> \bvx \\[1ex] 
+\hspace{1in} 	\= \hspace{1in}
+				\= \= \= \hspace{1in}	\= 
+								\kill
+$A$|$B$ \> $A$//$B$	\> $x$,\= $y$:$A$//\= $B$
+				\> \{$A$|$B$\}									\\[-.6ex]
+	\> \> \bvx
+		       \> \bvy     \> \bvx  \\[-1.5ex]
+	\>	\>	\>	   \> \bvy  \\[1ex]
+\hspace{1in} 	\= \= \= \hspace{1in}
+				\= \hspace{1in}	\= \= \=
+								\kill
+	 \{\= $x$:$A$|\= $B$\} \> $a$ = $b$ in $A$\\[-.6ex]
+ \> \bvx    \> \bvx \\[1ex]
+
+{\scriptsize{canonical if closed}}\\[-4pt]
+\makebox[\hsize]{\dotfill{}}\\[-1pt]
+\scriptsize{noncanonical if closed}
+\end{tabbing}
+\begin{tabbing}
+\= \hspace{1in}	\= \hspace{1in}	\= \hspace{1in}	\= \=			\kill
+-\= $a$		\> any($a$)	\> $t$($a$)	\> $a$+\= $b$	       \\[-1ex]
+ \> \parg	\>		\> \parg	\> \parg
+						       \> \parg		\\[1ex]
+\= \hspace{1in}	\= \= \hspace{1in}
+				\= \= \hspace{1in}
+						\= \=			\kill
+$a$-\= $b$	\> $a$*\= $b$	\> $a$/\= $b$	\> $a$ mod \= $b$      \\[-1ex]
+\parg
+    \> \parg	 \> \parg
+		        \> \parg
+				\> \parg
+				       \> \parg \> \parg   \> \parg    \\[1ex]
+\= \= \= \= \hspace{2in}	\= \= \= \= \= \= 			\kill
+spread(\= $a$;\= $x$,\= $y$.\= $t$)
+				\> decide(\= $a$;\= $x$.\= $s$;\= $y$.\= $t$) \\[-.6ex]
+       \> \parg
+	      \> \bvx
+		     \> \bvy
+			    \> \bvx
+				\> 	  \> \parg
+						 \> \bvx
+							\> \bvx \> \bvy
+								      \> \bvy \\[-1.5ex]
+	\>    \>     \>	    \> \bvy			
+\end{tabbing}
+\begin{tabbing}
+\= \= \= \= \= \hspace{2in}	\= \= \= \= \= \= \= \= 		\kill
+list\_ind(\= $a$;$s$;\= $x$,\= $y$,\= $u$.\= $t$)
+\> ind(\= $a$;\= $x$,\= $y$.\= $s$;$b$;\= $u$,\= $v$.\= $t$) \\[-.6ex]
+	  \> \parg   \> \bvx
+			    \> \bvy
+				   \> \bvu
+					  \> \bvx
+\>     \> \parg
+	      \> \bvx
+		     \> \bvy
+			    \> \bvx    \> \bvu
+					      \> \bvv
+						     \> \bvu \\[-1.5ex]
+	  \>	     \>	   \>	   \>	  \> \bvy
+\>	\>    \>     \>	    \> \bvy    \>      \>    \> \bvv \\[-1.2ex]
+	  \>	     \>	   \>	   \>	  \> \bvu	     \\[1ex]
+\= \= \hspace{2in}		\= \= \= \hspace{2in}		\= \= \= \kill
+atom\_eq(\= $a$;\= $b$;$s$;$t$) \> int\_eq(\= $a$;\= $b$;$s$;$t$)
+																\\[-1ex]
+	 \> \parg
+		\> \parg	\>	   \> \parg
+						  \> \parg	\>	\\[1ex]
+									       
+	 less(\= $a$;\= $b$;$s$;$t$)\\[-.6ex]
+	 \> \parg \> \parg
+\end{tabbing}
+\vspace{1ex}
+\mbox{\small{
+\begin{tabular}{ll}
+	$x,y,u,v$	& range over variables. \\
+	$a,b,s,t,A,B$	& range over terms.  \\
+	$n$		& ranges over integers. \\
+	$k$		& ranges over positive integers. \\
+	$i$		& ranges over atom constants. 
+\end{tabular}
+ } }
+ 
+\vspace{2pt}
+{\small
+
+	Variables written below a term indicate 
+	where the variables become bound.\\
+	``\parg{}'' indicates principal arguments.\\
+} 
+\label{TermTable}
+\caption{Terms}
+\vspace{2pt}
+\hrule{}
+\end{minipage}
+\end{figure}
+
+The free\index{free variables}{} occurrences of a variable $x$
+in a term $t$ are the occurrences
+of $x$ which either {\sl are} $t$ or are free in the immediate subterms of $t$,
+excepting those occurrences of $x$ which become {\sl bound}\index{bound variables}{}
+in $t$.  In figure~\ref{TermTable}
+the variables written below the terms indicate which variable
+occurrences become bound; some examples are explained below.
+\begin{itemize}
+\item	In {\tt $x$:$A$\#$B$} the $x$ in front of the colon becomes bound
+	and any free occurrences of $x$ in $B$ become bound.
+	The free occurrences of variables in {\tt $x$:$A$\#$B$} are
+	all the free occurrences of variables in $A$ and
+	all the free occurrences of variables in $B$
+	except for $x$.
+\item	In {\tt <$a$,$b$>} no variable occurrences become bound; hence,
+	the free occurrences of variables in {\tt <$a$,$b$>} are
+	those of $a$ and those of $b$.
+\item	In {\tt spread($s$;$x$,$y$.$t$)} the $x$ and $y$ in front of the dot
+	and any free occurrences of $x$ or $y$ in $t$ become bound.
+\end{itemize}
+
+
+Parentheses may be used freely around terms and often must be used to resolve
+ambiguous notations correctly.  Figure~\ref{ParseTable} gives the
+relative\index{relative precedence}{} precedences and
+associativities\index{associativity}{}
+of \nprl{} operators.
+
+\begin{figure}
+\hrule{}
+\vspace{2ex}
+\begin{center}
+\begin{tabular}{ll}
+\multicolumn{2}{c}{Lower Precedence}\\[1ex]
+\verb'=',\verb'in'            & left associative \\[1ex]
+\verb'#',\verb'->',\verb'|',\verb'//'      & right associative \\[1ex]
+\verb'<' (as in {\tt $a$<$b$})             & left associative \\[1ex]
+\verb'+',\verb'-' (infix) & left associative \\[1ex]
+\verb'*',\verb'/',\verb'mod'         & left associative \\[1ex]
+\verb'inl',\verb'inr',\verb'-' (prefix) & ---\\[1ex]
+\verb'.' (as in {\tt $a$.$b$})	& right associative \\[1ex]
+\verb'\x.' 		& ---  \\[1ex]
+\verb'list'            & --- \\[1ex]
+{\tt ($a$)} (as in {\tt $t$($a$)}) & --- \\[1ex]
+\multicolumn{2}{c}{Higher Precedence}
+\end{tabular}
+\end{center}
+\caption{Operator Precedence}
+\label{ParseTable}
+\vspace{2pt}
+\hrule{}
+\end{figure}
+\index{operator precedence}{}
+
+The closed terms above the dotted line in figure~\ref{TermTable} are the 
+canonical\index{canonical terms}{} terms, while the closed terms below it
+are the noncanonical\index{noncanonical terms}{} terms.  Note that
+carets appear below most of the noncanonical forms; these indicate the
+{\sl principal\index{principal argument}{} argument places} of those
+terms.  This notion is used in the 
+evaluation procedure below.  Certain terms are
+designated as {\sl redices}\index{redex}{}, and each redex has a
+unique {\sl contractum}\index{contractum}{}.
+Figure~\ref{ReductionTable} shows all redices and their contracta.
+
+\begin{figure}[tp]
+\hrule{}
+\begin{center}
+\begin{tabular}{lp{2.5in}}
+{\bf Redex}				& {\bf Contractum} \\[4pt]
+{\tt (\verb+\+$x$.$b$)($a$)}		& $b[a/x]$ \\[2pt]
+{\tt spread(<$a$,$b$>;$x$,$y$.$t$)}	& $t[a,b/x,y]$ \\[2pt]
+{\tt decide(inl ($a$) ;$x$.$s$;$y$.$t$)}	& $s[a/x]$ \\[2pt]
+{\tt decide(inr ($b$) ;$x$.$s$;$y$.$t$)}	& $t[b/y]$ \\[2pt]
+{\tt list\_ind(nil;$s$;$x$,$y$,$u$.$t$)} & $s$ \\[2pt]
+{\tt list\_ind($a$.$b$;$s$;$x$,$y$,$u$.$t$)} & $t[a,b,\mbox{\tt list\_ind($b$;$s$;$x$,$y$,$u$.$t$)}/x,y,u]$ \\[2pt]
+{\tt atom\_eq($i$;$j$;$s$;$t$)}		& $s$ if $i$ is $j$; $t$ otherwise \\[2pt]
+{\tt int\_eq($m$;$n$;$s$;$t$)}		& $s$ if $m$ is $n$; $t$ otherwise \\[2pt]
+{\tt less($m$;$n$;$s$;$t$)}		& $s$ if $m$ is less than $n$; $t$ otherwise \\[2pt]
+{\tt -$n$}				& the negation of $n$ \\[2pt]
+{\tt $m$+$n$}				& the sum of $m$ and $n$ \\[2pt]
+{\tt $m$-$n$}				& the difference \\[2pt]
+{\tt $m$*$n$}				& the product \\[2pt]
+{\tt $m$/$n$}				& {\tt 0} if $n$ is {\tt 0}; otherwise,
+					  the floor of the obvious
+					  rational. \\[2pt]
+{\tt $m$ mod $n$}			& {\tt 0} if $n$ is {\tt 0};
+					  otherwise, the positive integer nearest {\tt 0}
+					  that differs from $m$ by a multiple 
+					  of $n$. \\[2pt]
+{\tt ind($m$;$x$,$y$.$s$;$b$;$u$,$v$.$t$)} & $b$ if $m$ is {\tt 0}; \\[-1\parskip]
+					& $t[m,${\tt ind($m-1$;$x$,$y$.$s$;$b$;$u$,$v$.$t$)}$/u,v]$
+					  if $m$ is positive;\\[-1\parskip]
+					& $s[m,${\tt ind($m+1$;$x$,$y$.$s$;$b$;$u$,$v$.$t$)}$/x,y]$
+					  if $m$ is negative.
+\end{tabular}
+\end{center}
+\vspace{-4ex}
+\scriptsize{
+\begin{tabular}{ll}
+$a, b, s, t$	& range over terms. \\
+$x, y, u, v$	& range over variables. \\
+$m, n$		& range over integers. \\
+$i, j$		& range over atom constants.
+\end{tabular} 
+}
+\caption{Redices and Contracta}
+\vspace{2pt}
+\hrule{}
+\label{ReductionTable}
+\end{figure}
+
+\label{EvalProc}
+The evaluation\index{evaluation}{} procedure is as follows.
+Given a (closed) term $t$, 
+\begin{description}{}
+\item	If $t$ is canonical then the procedure terminates with result $t$.
+\item	Otherwise, execute the evaluation procedure on each
+	principal argument of $t$, and if each has a value,
+	replace the principal arguments of $t$ by their respective
+	values; call this term $s$.
+\item	If $s$ is a redex then the procedure for evaluating $t$ is continued
+	by evaluating the contractum of $s$.
+\item	If $s$ is not a redex then the procedure is terminated
+	without result; $t$ has no value.
+\end{description}
+

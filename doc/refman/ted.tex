@@ -1,0 +1,220 @@
+\chapter{The Text Editor}
+
+Nuprl text consists of sequences of characters and {\em definition
+references}.  Since these sequences are stored internally as recursive
+trees, they are also known as {\em text{} trees}, or {\em T-trees}{}.
+The text{} editor, {\em ted}, is a structure{} editor; the cursor on
+the screen represents a cursor into the text tree being edited, and
+movements of the tree cursor are mapped into movements of the screen's
+cursor.
+
+The text editor is used to create and modify DEF, ML and EVAL objects
+as well as rules and main goals of theorems.
+Changes to objects are reflected immediately.
+
+The text editor is almost completely modeless.
+To insert a character, type it;
+to insert a definition, {\em instantiate} it;
+to remove a character, delete it or \KILL{} it;
+to move the cursor, use the arrow keys;
+to exit the editor, use \EXIT.
+There is a {\em bracket} mode, explained in the next section,
+which changes the way definition references are displayed.
+
+\section{Tree Cursors, Tree Positions and Bracket Mode}
+
+A {\em tree{} cursor}{}
+is a path from the root of a text tree to a
+{\em tree{} position}, namely
+a character, a definition reference or the end of a subtree.
+When text is being edited the tree cursor is mapped to a location on the
+screen,
+and this is where the editor places the screen cursor.
+Unfortunately, more than one tree position can map to a screen
+position.
+Consider the following definition of the $\geq$ relation.
+\begin{verbatim}
+        <x>>=<y>==((<x><<y>) -> void).
+\end{verbatim}
+In the tree represented by {\tt 3>=1} there are six tree positions:
+the entire definition,
+the character {\tt 3},
+the end of the subtree containing {\tt 3},
+the character {\tt 1},
+the end of the subtree containing {\tt 1} and
+the end of the entire tree.
+These six tree positions are mapped into four screen positions:
+\begin{verbatim}
+        3>=1
+        ^^ ^^
+\end{verbatim}
+The first is for both the entire definition and the character {\tt 3},
+the second is for the end of the subtree containing {\tt 3},
+the third is for the character {\tt 1},
+and the fourth is for the end of the subtree containing {\tt 1} and also for
+the end of the entire tree.
+If the screen cursor were under the {\tt 3}, pressing the \KILL{} key would
+either delete the entire definition or just the {\tt 3}, depending on where the
+{\em tree} cursor actually was.
+
+To eliminate this ambiguity the window may be put into
+{\em bracket{} mode\/};
+in this mode all definition references are surrounded by square brackets, and the screen
+position that corresponds to the entire definition reference is the left square bracket:
+\begin{verbatim}
+        [3>=1]
+        ^^^ ^^^
+\end{verbatim}
+Notice that the right square bracket corresponds to the end of the subtree
+containing {\tt 1}; this gets rid of the other ambiguous screen position.
+
+For another example of an ambiguity removed by bracket mode, consider the
+two trees
+\begin{verbatim}
+        [23>=1]   and   2[3>=1].
+\end{verbatim}
+The first is quite reasonable, but the second is probably a mistake, since
+it expands to {\tt 2((3<1) -> void)}.
+In unbracketed mode both trees would be displayed as {\tt 23>=1}.
+
+The bracket mode toggle, \MODE, switches the current window into or
+out of bracket mode.
+
+\section{Moving the Cursor}{}
+
+The cursor can be cycled through the edit windows with the $\JUMP$ key.
+This is most useful when copying text from one window to another.
+To move the cursor around within the current window, use the arrow and
+\LONG{} keys, as follows.
+
+\begin {description}
+\item[\UP, \DOWN]{} \hfill \break
+\noindent
+    Move the screen cursor up or down one line.
+    The tree cursor is moved to the tree position that most closely corresponds
+    to the screen position one line up or down.
+    If the new tree position is not already being shown in the text window,
+    scroll the window.
+
+\item[\LEFT, \RIGHT]{} \hfill \break
+\noindent
+    Move the tree cursor left or right one position.
+    That is, move one position backward or forward in a preorder walk of the
+    tree.
+    Keep in mind that, as explained above,
+    this one-position change of the tree cursor does not
+    always correspond to a one-column change of the screen cursor.  
+
+\item[\LONG{} \UP, \LONG{} \DOWN]{} \hfill \break
+\noindent
+    Move up or down four lines in the screen.
+    If necessary, scroll the window.
+
+\item[\LONG{} \LEFT, \LONG{} \RIGHT]{} \hfill \break
+\noindent
+    Move the tree cursor left or right four positions.
+
+\item[\LONG{} \LONG{} \UP, \LONG{} \LONG{} \DOWN]{} \hfill \break
+\noindent
+    Move up or down a screen.
+
+\item[\LONG{} \LONG{} \LEFT, \LONG{} \LONG{} \RIGHT]{} \hfill \break
+\noindent
+    Move the screen cursor to the left or right end of the current line.
+    The tree cursor is moved left or right to match.
+\end {description}
+
+If \LONG{} is used before any other key besides an arrow key it is ignored.
+(The \LONG{} \DIAG{} command works only in the proof editor.)
+Also, any extra \LONG{}s are ignored.
+
+The cursor may also be moved within a single window by pointing at the
+desired location and clicking mouse-\JUMP.  However, note that scrolling
+the contents of the window cannot be done just with the mouse.  Pointing at
+a non-active window and clicking mouse-\JUMP\ will make the window active
+(but leave the cursor where it was when the window was last active).
+
+\section{Adding Text}
+
+{}To add a character, simply type it; it will be added to the left of the
+current position.
+This also includes the newline character; to start a new line, enter
+carriage return.
+
+To {\em instantiate}{} a definition, use \INS.  Nuprl will prompt for the name of
+the definition in the command window with {\tt I$\,$>}; type the name of the definition
+and press \CR.  (The name can be abbreviated in the same way as in command
+arguments---see above.)  Nuprl will insert an instance of the definition to the
+left of the current position and move the tree cursor to the first
+parameter.
+
+\section{Deleting and Killing Text}
+
+There are two ways to remove a character.
+The \KILL\ key removes the one at the current position,
+while
+the $\DEL${} key removes the one to the left of the current position,
+assuming it is in the same subtree as the current position.
+(If it is not \DEL{} does nothing.)
+To remove a definition reference, use $\KILL${}.{}
+The cursor{} must point to the beginning of the reference.
+A {\em selection}{} of text may also be killed.
+This involves three steps.
+\begin {enumerate}
+\item With the $\SEL$ key choose the left or right endpoint of
+    the selection.  Alternatively, point at the endpoint with the
+    mouse and click mouse-\SEL\ (this will not move the cursor).
+
+\item Select the other endpoint.
+    It must be in the same window as the first.
+    Also, if the first endpoint was within an argument to a definition,
+    the second must be within the same argument.
+
+\item Press \KILL; \prl{} will delete the two endpoints and everything between.
+\end {enumerate}
+
+The killed text is moved to the {\em kill{} buffer}
+and can be used by the \COPY{} command (see below).
+Only killed text goes into the kill buffer; text deleted by \DEL{} does not.
+
+There can be at most two selected endpoints at any time.
+If another endpoint is selected the oldest one is forgotten.
+When a \KILL{} or \COPY{} is done {\em both} endpoints are forgotten.
+The two selected endpoints must be in the same window;
+if they are not \KILL{} and \COPY{} will give error messages.
+
+\section{Copying and Moving Text}
+
+To{} copy text from one location to another, select it,
+move the cursor to the
+target location, and press the \COPY{} key.
+If two endpoints were specified the selected text, including the endpoints,
+is copied to the left of the current position.
+If only one endpoint was specified the selected character or definition reference is
+copied to the left of the current position.
+In either case all endpoints are forgotten.
+
+To move{} text, use \KILL{} and \COPY{} together;
+if \COPY{} is pressed when no selections have been made the
+kill buffer is copied to the left of the current position.
+Therefore, to move some text, select it, \KILL{} it, move the cursor
+to the target position, and press \COPY.
+The kill buffer is not affected by a \COPY,
+so the easiest way to replicate a piece of text in many places is to
+type it, \KILL{} it and then use \COPY{} many times.
+
+\section{Miscellaneous}
+
+When typing at the command window, a mouse-\SEL\ while it is over a
+definition instance in another ted (text editing) window will cause the
+name of the definition to be inserted into the command window's input line.
+So if you are reading and do not know what a certain notation means, you
+can enter \CMD{} to get a {\tt P>} prompt, type ``view'', and then point at
+the notation in question.  The name of the definition will be typed in for
+you and a return will bring it up in a view window.  
+
+
+
+
+
+

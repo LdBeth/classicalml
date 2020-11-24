@@ -1,0 +1,1511 @@
+% -*- Default-character-style: (:FIX :ROMAN :VERY-LARGE); Mode: Tex -*-
+
+
+\chapter{Basic Tactics}
+
+\label{basic}
+
+
+A collection of ML files is automatically loaded into Nuprl whenever the
+system is loaded.  Some of these files contain the implementation of the ML
+functions described in the book.  The remaining files contain a fairly
+large collection of tactics and related functions.  This tactic collection
+should not be regarded as part of Nuprl.  Many tactic collections have been
+developed at Cornell over the last several years; this one was chosen
+because it is the most recent large collection that has been reasonably
+documented.  It is not, however, free of problems.  Some of the tactics
+have minor bugs, and others could be easily made much more effective.
+
+Serious users of Nuprl will want to build on and modify the basic tactic
+collection.  For those who wish to do so, the relevant files are named in the
+file \tid{nuprl/ml/load}.  Users who want a detailed knowledge of these tactics
+will also have to consult these files, since this document does not contain a
+full desription of the tactic collection.
+
+Most of the tactics (and related objects) in the Nuprl collection will be
+at least mentioned in this document; the ones that are omitted are mostly
+simple variants of objects that are mentioned, or have turned out not to be
+very useful in practice.  An example of the use of the tactics can be found
+in the library \tid{nuprl/lib/saddleback/new-lib}.  Expanding this library
+does not require that any extra ML files be loaded.
+
+The tactic collection described in this document is almost identical to the
+Nuprl 2.0 collection.  Many new tactics have been written since Nuprl 2.0
+was released, but we have not had the time to package and document these
+tactics for use elsewhere.  We hope to be able to do this in the near
+future, though.  The remainder of this document is the same as the one
+describing the 2.0 tactics except for a brief section at the end which
+describes a few additions and fixes.
+
+Most of this document has the form of a user's manual, although many of the
+descriptions will omit details that are uninteresting but necessary for
+actual use of the described function.  A typical description will be headed
+by a schematic application that may contain type information.  For example, a
+description of the function {\tt destruct\_hyp} might be introduced by
+\begin{quote}
+\tt       destruct\_hyp (i:int) (p:proof): tok\#term.  
+\end{quote}
+This indicates that the function has type \tid{int -> proof -> tok\#term}.  The
+parameters (\tid{i} and \tid{p} in the example) will often be referred to
+in the description.
+
+Many of the tactics described perform some kind of rewriting on a component
+of a sequent.  There are usually several ways to apply a particular kind of
+rewriting; for example, one can apply it just to the conclusion, or to some
+hypotheses, or to all hypotheses and the conclusion.  Usually, only one of
+these will be mentioned (usually the one which applies rewriting everywhere).
+For example, only \tid{Eval} will be described, although there are also tactics
+\tid{EvalHyp} and \tid{EvalConcl}.
+
+
+\section{Definitions}
+
+\label{definitions}
+
+To take full advantage of the tactic collection,
+the user must follow a simple convention in making
+definitions.  As pointed out in the previous
+chapter, although Nuprl's definition facility
+allows considerable flexibility in making notations for
+terms, it cannot reasonably serve as an abstraction
+mechanism.  A solution to this deficiency is to
+define objects via extraction.  Using this scheme,
+a complete definition consists of two library
+objects: a theorem object whose extraction is the
+defined term, and a definition object which gives a
+display form for the {\tt term\_of} term which
+denotes the extraction.  Sometimes the defining
+theorem also serves to give a type to the defined
+term; other times, a separate theorem is used for
+this.  The library objects associated with a
+definition are related by a naming convention
+(involving trailing underscores).
+
+There are two styles of definition in this scheme.  We will describe
+these using two simple examples.  The first style of definition is
+exemplified by the definition of a function which takes the maximum of
+two natural numbers.  The definition object for this function is
+called {\tt N\_max}, and its body is
+\begin{Numath}
+\Nu{max(<m>,<n>) == term\_of(N\_max\_)(<m>)(<n>).}
+\end{Numath}%
+The theorem {\tt N\_max\_} has statement
+\begin{Numath}
+\Nu{>> N -> N -> N,}
+\end{Numath}%
+and is proved by explicitly introducing the desired object, using the tactic
+invocation 
+\begin{Numath}
+\Nu{(ExplicitI '\mlambda{}m n. less(m;n;n;m)' ...).}
+\end{Numath}%
+
+The second style of definition is exemplified by the definition of the length
+function (for lists).  The definition object {\tt length} is
+\begin{Numath}
+\Nu{|<l>| == term\_of(length\_)(<l>).}
+\end{Numath}%
+The theorem {\tt length\_} has statement
+\begin{Numath}
+\Nu{>> Object}
+\end{Numath}%
+and extraction
+\begin{Numath}
+\Nu{\mlambda{}l. list\_ind(l; 0; h,t,v.v+1).}
+\end{Numath}%
+The type of the theorem extracted from is the trivial type {\tt Object}
+because it is convenient to have the polymorphism of {\tt length} implicit.
+(The type {\tt Object} never appears except in these kinds of definitions.
+See Appendix~\ref{experimental-types} for more information on {\tt Object}).  In other words,
+instead of taking as arguments a type and a list over that type, the length
+function as defined above just takes a list as an argument.  The typing lemma
+for this definition is called {\tt length\_\_} and is
+\begin{Numath}
+\Nu{\mforall{}A:U1. \mforall{}l:A list. |l| in N}
+\end{Numath}%
+
+In summary, an instance of a definition is actually an application of a 
+{\tt term\_of} term to some arguments.
+Definition objects in the library
+should be
+regarded as incidental additions that make displayed terms easier to read.
+
+\section{Terms}
+
+There is a large set of functions for dealing with terms.  
+Most of these functions are for
+analyzing, constructing, or recognizing terms.  Only three of them
+will be described
+here.
+
+
+{\tt get\_type ($p$:proof) ($t$:term).} The result
+is a type $T$ for $t$, such that the autotactic can
+(almost always, in practice) prove that $t$ is a
+member of $T$ under the hypotheses of the sequent
+$p$.  The algorithm that computes $T$ uses a
+function {\tt g} that computes a type given a term
+$t$ and a typing environment $e$ (an association
+between Nuprl variables and types).  This function
+uses a simple recursive algorithm.  If $t$ is a
+variable, the result is obtained by looking up $t$
+in $e$.  If $t$ is a canonical term, the result is
+computed from types for the immediate subterms.
+This is not alway possible (in which case an
+exception is raised), as when $t$ is a
+lambda-abstraction.  See the discussion of the
+membership tactic below for an explanation of why
+this kind of failure tends not to be a problem in
+practice.  When $t$ is a non-canonical term, the
+first step is to compute a type $T$ for its
+principle argument.  Head normalization and
+stripping off of set types is then repeatedly
+applied to $T$ until a type $T'$ is obtained that
+is canonical and not a set type.  If $t$ is an
+application $f(a)$, then $T'$ must be a function
+type {\tt $x$:$A$->$B$} (else failure), and the
+result is $B[a/x]$.  If $t$ is of the form {\tt
+decide($a$;$u$.$b$,$v$.$c$)}, then $T'$ must be a
+disjoint union {\tt $A$|$B$}, and the result is {\tt g}
+applied to $b$ and the environment $e$ updated with
+an association between $u$ and $A$; or if this
+fails, an analogous application to $c$.  The {\tt
+spread} case is analogous.  If $t$ is an induction
+form, then an attempt is made to compute the result
+just from the base case.  Finally, if $t$ is of the
+form {\tt term\_of($a$)}, then the result is the
+main goal of the theorem named $a$.
+
+A special case is when $t$ is an instance of a definition of the second kind
+described in Section~\ref{definitions}.  In such a case, there is a theorem that
+is a universally quantified statement ending with a term of the form {\tt
+$a$~in~$A$}.  Matching of $a$ against $t$ is used to compute terms for
+instantiating the quantified variables appearing in $A$, and the resulting
+instance of $A$ is returned as the type of $t$.
+
+{\tt match\_part\_in\_context $f$ $A$ $t$ $p$ $l$}.  Find a subformula
+$A'$ of $A$, and a list of terms that yield $t$ when substituted in $A'$ for
+the variables that are bound by the universal quantifiers in $A$ whose scope
+contains $A'$.  The result is the list of terms.  The subformula $A'$ is one
+which can be obtained by descending through conjunctions, through universal
+quantifiers, through implications via the consequent, and finally by
+applying the function $f$, which should be a term destructor.
+First-order matching is used to compute substitutions for the free variable
+occurrences of $A'$ that are
+bound in $A$.   
+If matching does not provide instantiating terms
+for all the universal quantifiers encountered on the descent to $A'$,
+then type information is used.  In particular, for each universally quantified
+variable $x$ which has been instantiated with a term $a$, a type is computed for
+$a$ using {\tt get\_type $p$ $a$}, and this type (or certain derived types, if
+necessary) is matched against the type obtained from the appropriate universal
+quantifier.  After all possible type information has been used, the term list
+$l$ is used for any further required instantiating terms.  
+
+The use of type information is important for definitions that use implicit
+polymorphism.  As a simple example, consider the function {\tt tl} that
+computes the tail of a list.  Suppose that it has the typing lemma
+\begin{Numath}
+\Nu{\mforall{}A:U1. \mforall{}l:A list. tl(l) in  A list.}
+\end{Numath}%
+In computing the type of a particular application {\tt tl($s$)},
+the matching of {\tt tl($s$)} against {\tt tl(l)} gives an
+instantiation only for {\tt l}.  If a type for $s$ can be computed, and this
+type is (or can be reduced to) a list type, then matching against the declared
+type {\tt A~list} for {\tt l} gives an instantiation for {\tt A}.  Instantiating
+the lemma with the computed terms yields a type for {\tt tl($s$)}.
+
+{\tt tag\_redices ($t$:term)}.  This tags redex-contractum pairs in $t$ so that
+direct computation will result in all the contractions being performed.  This
+function can be updated from ML objects in the library (by adding to a global
+list).  This allows the user to make some of the tactics that use reduction take
+into account definitional extensions to the redex-contractum relation.
+
+
+\section{Computation}
+
+\label{computation}
+
+There are many tactics which are based on the evaluation and direct computation
+rules.  These include the tactics for 
+definition expansion.
+
+{\tt Eval}.  Perform evaluation on the conclusion and all hypotheses, 
+expanding {\tt term\_of} terms whenever required for computation to proceed.
+
+{\tt EvalOnly {\id{names}}}.  Like {\tt Eval}, except that terms of the form
+{\tt
+term\_\-of($x$)} are only expanded if $x$ is a member of the list \id{names}.
+
+{\tt EvalExcept {\id{names}}}.  Like {\tt Eval}, except that terms of the
+form {\tt term\_\-of($x$)} are treated as constants when $x$ is a member of the
+list \id{names}.
+
+{\tt EvalSubtermOfConcl $b$ \id{names} $P$}.  Evaluate a subterm of the
+conclusion that satisfies the predicate $P$.  The arguments $b$ and \id{names}
+have the same purpose as in the evaluation rule.
+
+{\tt CC}.  Compute the conclusion to head normal form.
+
+{\tt ComputeEquands}.  If the conclusion is of the form {\tt $a$=$b$~in~$A$}
+then head-normalize the ``equands'' $a$ and $b$, else fail.
+
+{\tt Reduce}.  Repeatedly perform reductions of redex-contractum
+pairs wherever the legal-tagging restrictions permit it.
+
+{\tt HypModComp($i$:int)}.  It can require excessive
+computation time to demonstrate that a hypothesis
+is equal (as a type) to the conclusion of a sequent
+by completely normalizing both terms and then
+checking that the results are identical.  {\tt
+HypModComp} provides an approximation to complete
+normalization that is usually much faster.  It
+proceeds by applying reductions to a subterm in the
+hypothesis and a corresponding subterm in the
+conclusion.  Initially, the subterms are the entire
+respective terms.  At each stage, it applies the
+smallest number of reductions such that the two
+resulting subterms are either instances of the same
+definition, or are in head normal form with the
+same head.  If this is impossible, the tactic
+fails, otherwise the procedure is repeated on the
+immediate subterms of the resulting subterms.  An
+important application of this tactic is in the
+inclusion tactic described below.
+
+There are several tactics that are used for {\em unfolding} 
+(expanding) and {\em folding} (the inverse of unfolding) definitions.  Because
+definitions are applications of {\tt term\_of} terms to some arguments,
+unfolding a definition occurrence in a sequent requires using direct computation
+to replace the appropriate {\tt term\_of} term by its denotation and to do 
+reduction steps until all the arguments to the definition instance are
+substituted into the body of the definition.  
+
+{\tt Unfold \id{names}}.  Unfold all definitions whose name is in the list
+\id{names}.
+
+{\tt Fold \id{names}}.  Add as many instances of the named definitions as
+possible.  This is not alway easy, since arguments to a definition instance
+can disappear when the definition is expanded.  This is often the case for
+arguments that are types.   For example, the length function given in
+Section~\ref{definitions} could have been defined to be 
+\begin{Numath}
+\Nu{\mlambda{}A. \mlambda{}l. list\_ind(l; 0; h,t,v.v+1),}
+\end{Numath}%
+which has type
+\begin{Numath}
+\Nu{A:U1 -> l:(A list) -> N.}
+\end{Numath}%
+To fold a term 
+\begin{Numath}
+\Nu{list\_ind($l$; 0; h,t,v.v+1)}
+\end{Numath}%
+into an application of the length function, the type of $l$ has to be computed.
+
+{\tt UnrollDefs \id{names}}.  For each \id{name} in \id{names} and each
+instance of the definition named \id{name}, do the following.  Unfold the
+definition, then fail if the result is not a redex that
+is of the form {\tt list\_ind(\ldots)} or {\tt rec\_ind(\ldots)}, otherwise
+contract the redex and attempt to fold it to an instance of the definition
+\id{name}.  For
+example, unrolling {\tt |h.t|} gives {\tt 1+|t|}.
+
+\section{Tacticals}
+
+A {\em tactical} in LCF is a function which is used for combining tactics.  The
+basic LCF tacticals have analogues in Nuprl.  
+
+{\tt $T$ THEN $T'$}.  Apply the tactic $T$.  If it fails, then fail, otherwise apply
+$T'$ to the subgoals generated by $T$.  This tactical has several variants
+which incorporate useful restrictions on the kind of subgoal $T'$ is applied
+to.  {\tt $T$~THENS~$T'$}, when applied to a proof $p$, only applies $T'$ to
+subgoals that have the same conclusion as $p$.  {\tt THENO} applies its second
+argument only to goals that have a {\em different} conclusion.  {\tt THENM} and
+{\tt THENW} apply their second argument only to goals that are not membership
+goals or well-formedness goals respectively.  (A membership goal is one
+whose conclusion is of the form {\tt >>~$t$~in~$T$}, and a well-formedness goal
+is one whose conclusion is of the form {\tt >>~$T$~in~U$i$}.)  Because many
+tactics have actions that are well-defined except for the generation of
+``junk'' subgoals, the variants are used extensively for combining these tactics
+(both at the top level in proof construction, and in the construction of other
+tactics).
+
+{\tt Repeat $T$}.  Apply $T$ until it fails or ceases to make progress.  This
+tactical has variants analogous to the variants of {\tt THEN}.
+
+{\tt $T$ ORELSE $T'$}.  Apply $T$.  If it fails, apply $T'$.
+
+
+\section{Some Derived Rules}
+
+\label{derived}
+
+Many of the tactics in this section generate unwanted subgoals.  These are
+usually membership goals, or can be proven by some trivial propositional
+reasoning.  In practice they can almost always be proved by the autotactic, and 
+so the tactics will be described as though they did not generate any
+``junk''. 
+
+For each primitive inference rule in Nuprl, there is a corresponding tactic.
+Such tactics are useful partly because they compute many of the parameters required
+by the corresponding rule.  Some of these parameters are easily computed, 
+such as those
+giving names for new variables, and many are not, such as those which supply
+types for certain subterms of the goal.   Many of these tactics also incorporate
+computation. For rules which require that a hypothesis or the conclusion be a
+canonical type, the corresponding tactic will head-normalize the appropriate
+term before attempting to apply the rule. 
+
+{\tt ILeft}.  If the conclusion is or computes to a disjoint union, then apply
+the introduction rule which picks the left disjunct.  {\tt IRight} is analogous.
+
+{\tt ITerms $l$}.  If the conclusion is existentially quantified (using product
+types or set types), then introduce the terms in the list $l$ as witnesses for
+the existentially quantified variables.
+
+{\tt I}.  If the previous three tactics do not apply, and if the conclusion is a
+canonical type that is not an equality or {\tt void}, then apply the
+introduction rule for the type.
+
+{\tt EqI}.  If the conclusion is of the form {\tt $t$~in~$T$} or {\tt
+$t$=$t'$~in~$T$}, where $t$ is not a variable and, in the latter case, $t$ and
+$t'$ have the same outermost term constructor, then apply the appropriate
+equality-intro rule.  This will often involve computing a type.  For example,
+when applied to the goal 
+\begin{Numath}
+\Nu{>>~$f$($a$) in $T$,}
+\end{Numath}%
+{\tt EqI} must compute a
+functional type for $f$ in order to apply the equality-intro rule for
+application.  If the type
+computed for $f$ is {\tt $x$:$A$->$B$}, but $B[a/x]$ is not identical to $T$,
+then no equality-intro rule applies.  In this case, {\tt EqI} will assert 
+\begin{Numath}
+\Nu{$f$($a$) in $B[a/x]$.}
+\end{Numath}%
+To prove that this implies the original goal, {\tt EqI} calls {\tt Inclusion},
+which is described in Section~\ref{autotactic}.
+
+{\tt EOn $t$ $i$}.  Instantiate with $t$ the universally quantified formula
+in hypothesis $i$.
+
+{\tt E $i$}.  If the type in hypothesis $i$ is not universally quantified,
+apply the appropriate elimination rule.
+
+{\tt Unroll $i$}.  If hypothesis $i$ declares a variable $x$ to be of a list or
+recursive type, then ``unroll'' the type.  If the type is a recursive type, the
+main step is to apply the ``unroll'' rule for recursive types.  If it is a list
+type, then there are two main subgoals.  The first is essentially the goal with
+$x$ replaced by {\tt nil}, and the second is the goal with $x$ replaced by the
+cons {\tt $h$.$t$} for $h$ and $t$ new variables.
+
+{\tt SubstFor $t$}.  If $t$ is of the form {\tt $a$=$b$~in~$A$}, substitute $b$
+for $a$ in the conclusion.  There is an analogous tactic, {\tt SubstForInHyp},
+which works on hypotheses.
+
+There are also slightly generalized versions of some of the elimination rules.
+For example, {\tt RepeatAndE} breaks up a hypothesis which is a conjunction,
+making each conjunct into a new hypothesis.  The work done by some of these
+generalizations can be somewhat substantial.  As an example, consider
+the elimination rule for dependent product types.  If a hypothesis declaring
+some variable $x$ to be in a type of the form {\tt $y$:$A$\#$B$}
+is eliminated, then the hypothesis list is extended by three new hypotheses: 
+\begin{Numath}
+\Nu{$y$:$A$, $z$:$B$, $x$=<$y$,$z$> in $y$:$A$\#$B$,}
+\end{Numath}%
+and in the conclusion {\tt <$y$,$z$>} is substituted for $x$.  The tactic {\tt
+GenProductE} generalizes this rule to an arbitrary number of repeated
+products.
+For an $n$-fold product, $n+1$ new
+hypotheses are generated, the last of which is an equation between $x$ and an
+$n$-tuple.  Simply chaining together an appropriate sequence of applications of
+the elimination rule will generate $n$ equalities, which must be collapsed using
+substitution.  The tactic uses another method which is slightly better.  In
+either case, new membership subgoals are generated along the way, and so
+applications of the tactic can be much slower than one might expect.  
+
+A useful way to apply elimination rules is with {\tt OnVar}.
+
+{\tt OnVar $x$ ($T$:int->tactic)}.  If $x$ is declared in
+the hypothesis list, apply $T$ to that hypothesis.  Otherwise, repeatedly
+apply introduction rules as long as the conclusion is a universal quantification
+or an implication, or until $x$ becomes declared, in which case apply
+$T$ to the hypothesis declaring it.
+
+There are several tactics that perform generalization, replacing a term in the
+conclusion by a new variable.
+
+{\tt LetBe $x$ $a$ $A$}.  If the goal is {\tt >>~$B$}, then the subgoal
+generated is
+\begin{Numath}
+\Nu{$x$:$A$, $x$=$a$ in $A$ >> $B[x/a]$}
+\end{Numath}%
+(regarding a subgoal {\tt >>~$a$~in~$A$} as a ``junk'' subgoal).
+
+{\tt TypeSubterm $a$ $A$}. If the goal is {\tt >>~$b$ in $B$}, then the subgoal
+generated is
+\begin{Numath}
+\Nu{$x$:$A$ >> $b[x/a]$ in $B$.}
+\end{Numath}%
+
+{\tt ETerm $a$}.  This is similar to {\tt LetBe}, except that the type $A$ for $a$
+is computed, and elimination is done on the resulting new declaration.
+
+There are some simple derived rules for equality reasoning.
+
+{\tt DestructEq $f$ $i$}.  If hypothesis $i$ is of the form {\tt
+$a$=$b$~in~$A$}, then compute a type $A'$ and add a new hypothesis 
+\begin{Numath}
+\Nu{$f$($a$) = $f$($b$) in $A'$.}
+\end{Numath}%
+The term $f$ must be a lambda-abstraction, and should be a destructor function
+(such as projection from pairs).
+
+{\tt SplitEq $t$}.  If the conclusion is of the form {\tt $a$=$b$~in~$A$}, then
+generate two subgoals, with conclusions {\tt $a$=$t$~in~$A$} and {\tt
+$t$=$b$~in~$A$}.
+
+There are two frequently used tactics related to the set type.
+
+{\tt Unhide}.  If the conclusion is a squashed type (of the form
+$\Set{Int}{A}$ for some type $A$)
+then the single subgoal is identical to the goal,
+except that no hypotheses are hidden (a hidden hypothesis is one that cannot be
+used until it becomes unhidden---hidden hypotheses are created only by the
+set-elim rule). 
+
+{\tt Properties $l$}.  For each term $t$ in the list $l$, compute a type for
+$t$, head-normalize the type, and if a type of the form {\tt \{$x$:$A$|$B$\}} is
+obtained, then add $B[t/x]$ as a new hypotheses.
+
+We end this section with a few miscellaneous tactics.
+
+{\tt AbstractConcl $t$}.  If the conclusion is $A$, then create a new variable
+$x$ and produce a subgoal with conclusion
+\begin{Numath}
+\Nu{(\mlambda{}$x$. $A[x/t]$) ($t$).}
+\end{Numath}%
+This is useful in the application of certain lemmas which quantify over
+predicates, such as those expressing induction schemes.
+
+{\tt BringHyps $l$}.  ``Bring'' some hypotheses (specified by the numbers in $l$) to
+the conclusion side of the sequent, adding them to the old conclusion as
+antecedents of an implication or as universal quantifiers.  As an example,
+bringing the last hypothesis of
+\begin{Numath}
+\Nu{$x$:$A$ >> $B$}
+\end{Numath}%
+results in
+\begin{Numath}
+\Nu{>> $x$:$A$->$B$.}
+\end{Numath}%
+
+{\tt NonNegInd $x$ $i$}.  If the type in hypothesis $i$ is (or computes to) a
+subrange of the integers, then use it to calculate an integer lower bound for
+the variable $x$ declared by the hypothesis.  If the lower bound is
+non-negative, then do induction on $x$, using the bound as the base case.
+
+
+
+\section{Chaining and Lemma Application}
+
+There is a group of tactics based on the well-known notions of backward
+and forward chaining.  The description of these tactics requires two
+definitions.  For terms $A$ and $B$, $A$
+is an {\em assumption of} $B$ if: $B$ is of the form {\tt $x$:$C$->$D$} (which
+may be degenerate, {\em i.e.}, an implication) and $A$ is either identical to
+$C$ or is an assumption of $D$; or $B$ is of the form {\tt $C$\#$D$} and $A$ is
+an assumption of $C$ or of $D$.  $A$ is a {\em conclusion of} $B$ if: $A$ and
+$B$ are identical; or $B$
+is {\tt $x$:$C$->$D$} and $A$ is a
+conclusion of $D$; or $B$ is {\tt $C$\#$D$} and $A$ is a conclusion
+of $C$ or of $D$.  As assumption $A$ of $B$ is an antecedent in $B$ of a
+conclusion $A'$ of $B$ if: $B$ is {\tt $x$:$C$->$D$} and either $A$ is $C$
+and $A'$ is in $D$ or $A$ is an antecedent of $A'$ in $D$; or $B$ is {\tt
+$C$\#$D$} and either $A$ is an antecedent of $A'$ in $C$ or $A$ is an
+antecedent of $A'$ in $D$.
+
+{\tt BackThruHypUsing $l$ $i$}.  Do one backward chaining step using hypothesis
+$i$.  This uses {\tt match\_part\_in\_context} (described earlier) to match the
+conclusion $C$ of the sequent against a conclusion of the type $A$ that is 
+hypothesis $i$.  The terms in $l$ are used as additional instantiating terms.
+If the match is successful, then the tactic generates as subgoals sequents with
+the same hypothesis list, but with conclusions that are suitble
+instantiations of assumptions of $A$
+that are antecedents in $A$ of the subterm occurrence matched with $C$.
+
+Several tactics are based on {\tt BackThruHypUsing}.
+
+{\tt BackchainWith $T$}.  This is most concisely described by ML code:  
+\begin{Numath}
+\NuColumn{%
+\Nu{\N{}let BackchainWith Tactic =}\\%
+\Nu{\N{}Try Hypothesis THEN}\\%
+\Nu{\N{}AtomizeConcl THENW}\\%
+\Nu{\N{}( ApplyToAHyp (\mlambda{}i. BackThruHyp i THENM BackchainWith Tactic)}\\%
+\Nu{\N{}  ORELSE Tactic}\\%
+\Nu{\N{}).}%
+}%
+\end{Numath}%
+{\tt Hypothesis} proves goals where the conclusion is identical to a hypothesis,
+{\tt Atomize\-Concl} repeatedly applies introductions until the conclusion is not
+a conjunction or function type, and {\tt ApplyToAHyp $T$}, for $T$ of type {\tt
+int->tactic}, applies $T$ to each hypothesis in turn until success ({\em i.e.},
+until an application does not fail).  A useful
+instance of this tactic is {\tt BackchainWith Fail}, where {\tt Fail} is the
+tactic which always fails.  This implements a kind of Horn-clause theorem
+prover (based on depth-first search).  It is used by the tactic {\tt
+Contradiction}, which attempts to show the hypothesis list to be contradictory
+by asserting {\tt void} and backchaining.  Note that {\tt BackchainWith} does
+not check for looping, although it would be easy to modify it so that it does
+(in fact the current version does check).
+
+There are two main ways to apply lemmas.  One is to apply them explicitly
+using the tactics described below.  The other involves explicitly grouping
+them according to similarity of usage.  The grouping is accomplished by using
+a naming conventions, as in the association of typing lemmas to definitions,
+or by using ML objects in the library to update global lists of tactics
+and lemma names.  There are several tactics that refer to such lists; they
+generally use these lists by trying to apply every tactic in the list or
+every lemma named in the list.  For example, the tactics {\tt Autotactic},
+{\tt Member}
+and {\tt Inclusion}, described in a later section, each (as a last resort)
+refer to an assooiated list.  Below we give some other examples.  This
+technique is rather {\em ad hoc}, but it has turned out to be very useful in
+practice.  
+
+{\tt LemmaUsing \id{name} $l$}.  This is analogous to {\tt BackThruHyp},
+except that a lemma ({\em i.e.}, previously proved theorem), instead of a
+hypothesis, is
+``backed through''.  The tactic {\tt Lemma} can be used when there is no term list
+$l$.
+
+{\tt FLemma \id{name} $l$}.  If the hypotheses whose
+numbers appear in $l$ can be matched to some of the assumptions of
+the
+theorem named by \id{name}, then a subgoal is generated that has the same
+conclusion and has as an additional hypothesis the smallest conclusion of the
+named theorem such that all its antecedent assumptions were matched.  As in
+{\tt match\_part\_in\_context}, types of quantified variables are used to
+compute further instantiating terms.  A typical example of the use of {\tt
+FLemma} is in the application of a transitivity property.  Suppose $r$ has been
+proved, in a lemma named \id{foo}, to be transitive, {\em i.e.},
+\begin{Numath}
+\Nu{\mforall{}x,y,z:$A$. $r$(x,y) => $r$(y,z) => $r$(x,z).}
+\end{Numath}%
+If the first and
+second hypotheses in some sequent are {\tt $r$($x$,$y$)} and {\tt $r$($y$,$z$)},
+then an application of {\tt FLemma}, with arguments \id{foo} and {\tt [1;2]},
+will generate a subgoal which has {\tt $r$($x$,$z$)} as a new hypothesis.
+
+
+
+{\tt RewriteConclWithLemma \id{name}}.  If the named lemma has an equality as
+a conclusion, then try to match the left side of the equality against a subterm
+of the conclusion of the sequent; if successful, substitute for that subterm the
+appropriate instance of the right side of the equality.  This may generate
+non-trivial subgoals, other than the one resulting from the substitution, since
+the equality asserted by the lemma may have preconditions.  This tactic has
+several variants.
+
+{\tt Decidable.} This just repeatedly applies tactics from a global list.
+The members of the list are typically applications of {\tt Lemma} to the name
+of a theorem that asserts the decidability of some proposition ({\em i.e.},
+that has a conclusion of the form $P \vee \neg P$).  A related tactic is
+{\tt Decide} which,
+given $P$, produces subgoals for the cases $P$ and $\neg P$, calling {\tt
+Decidable} on the subgoal $P \vee \neg P$.
+
+{\tt Assume $P$}.  This is similar to {\tt Decide}, except that it deals
+with goals of the form {\tt ?$P$}, where {\tt ?$P$} is defined to be {\tt
+$P$|True}.  Types of this form are used to simulate ML-style failure in
+Nuprl.  {\tt Assume} $P$, if successful, generates two subgoals, one where
+$P$ is a new assumption, and one which is identical to the goal.  {\tt
+Assume} looks for a previously defined function that either produces a proof
+of $P$ or fails.  The two subgoals correspond to the two possible outcomes.
+
+\section{A Type Constructor}
+
+For the purpose of this section, define a {\em module} to be a function of the
+form 
+\begin{Numath}
+\Nu{$\lambda{} x_1 \ldots{} x_m$. %
+$y_1$:$B_1$ \# \ldots \# $y_{n-1}$:$B_{n-1}$ \# \{$y_n$:$B_n$|$C$\}.}   
+\end{Numath}%
+that is a member of a type
+\begin{Numath}
+\Nu{$x_1$:$A_1$ -> \ldots -> $x_m$:$A_m$ -> U$i$.}
+\end{Numath}%
+Many data types that arise in programming and in mathematics are modules by this
+definition (which is nonstandard).  To help create and use such parameterized
+data types,
+there is a function {\tt create\_module}.  The inputs to this function are
+the terms $A_i$, $B_j$, and $C$, a name $M$ for the module, names for Nuprl
+functions for projecting components of members of the type, a library
+position at
+which to begin creating the associated library objects, 
+a preferred name for a typical
+element of the module, and the universe level $i$.
+
+Executing the function creates library objects for the following:
+\begin{itemize}
+\item The definition of the module $M$.  This includes a definition object, and a
+theorem from which the module is extracted.  The theorem is usually 
+proved automatically.
+\item Definitions of $n$ implicitly-polymorphic projection functions.  For any
+members $a_1$, \ldots, $a_m$ of $A_1$, \ldots, $A_m$, respectively, the
+$i^{\id{th}}$ projection function selects the $i^{\id{th}}$ component from an
+$n$-tuple that is a member of {\tt $M$($a_1$,\ldots,$a_m$)}.  The theorems that
+give
+the types of the projections are generated, and usually proved, automatically.
+\item A theorem that states that $C$, which can be thought of as an axiom about
+members of the module, is true of the projections of any members of any {\tt
+$M$($a_1$,\ldots,$a_m$)}.
+\item Updating the {\tt tag\_redex} function (described above).  An ML object is
+created that has the effect of advising certain tactics that perform
+reduction to
+consider an application of a defined projection to an $n$-tuple to be a
+redex-contractum pair.
+\item Updating the generic module eliminator.  An ML object is created that has
+the effect of updating the {\tt ModE} tactic to take account of the new module.
+This tactic can be applied to any hypothesis whose type is an instance ({\em
+i.e.}, application) of a module that has been defined by {\tt create\_module}. 
+The tactic works like {\tt GenProductE}, and chooses new
+variable names that are based on the names of the projection functions.
+\end{itemize}
+
+
+\section{Derived Rules via Pattern Theorems}
+
+Often one wishes to write a tactic that simply summarizes a pattern of
+inference with a fixed structure.  In such cases, it is often easier to
+partially prove a ``pattern theorem'' that contains syntactic variables which
+get instantiated when the ``derived rule'' is applied.  Nuprl does not
+directly support this kind of construction of derived rules, but it is
+possible to simulate it.  The method of simulation is somewhat inelegant; it
+is presented here because it is useful, and because it was used in the
+formalization of Girard's Paradox (which is contained in the directory
+\tid{nuprl/lib}).
+
+In stating these pattern
+theorems, atoms are used as
+placeholders for irrelevant subterms.  The statement of this theorem is 
+\begin{Numath}
+\Nu{>> \mforall{}s:Term0. "G".}
+\end{Numath}%
+
+Immediately preceding a pattern theorem in the library should be a
+corresponding ML object.  This ML object, when checked, should use the function
+{\tt set\_\-d\_tactic\_\-args} to set certain global variables to contain the
+arguments that are necessary for the proof of the pattern theorem.  
+During the proof of the pattern theorem, a tactic needing arguments that
+cannot be computed from the sequent it is applied to uses a special function to
+access the global variables.  For example, a tactic may require terms to
+instantiate a universal quantifier with; one of the global variables refers to
+a list of terms from which the tactic may remove the needed number of terms by
+using the function {\tt get\_term\_arg}.
+
+The values given to the global variables by the ML object are just
+placeholders for the actual
+arguments that will be supplied by the tactic {\tt Pattern} which uses the
+theorem as a pattern for
+constructing another proof.  {\tt Pattern}, given
+as input a set of actual arguments, assigns the arguments to the
+appropriate variables, and then applies, in depth-first order, the rules that
+occur in the pattern proof tree.  
+
+Many of the derived rules that are defined with this mechanism resemble
+elimination or introduction rules; that is, they analyze either a hypothesis
+or the conclusion.  It is useful to encapsulate such tactics in a pair
+of tactics {\tt DE} and {\tt DI} (also called {\tt DElim} and {\tt
+DIntro}).  These tactics try to apply members of an associated
+global list, continuing through the list until success.  The user can have
+these lists updated from the library.
+
+
+
+\section{Type Checking and the Autotactic}
+
+\label{autotactic}
+
+As mentioned earlier, the most important single tactic is the autotactic.  In
+this section, the autotactic and related tactics are discussed.
+
+{\tt Inclusion $i$}.  Attempt to prove that a term $t$ is in a type $T'$
+assuming that hypothesis $i$ asserts that 
+$t$ is a member of a type $T$.  This
+tactic will make progress in the following situations.
+\begin{itemize}
+\item One of the members of a user-defined list of tactics succeeds.
+\item $T$ and $T'$ are (or compute to) universes, with the level of $T$ not
+greater than that of $T'$.
+\item $T$ is a subtype of $T'$.
+\item $T$ and $T'$ ``almost normalize'' to identical terms.  {\tt HypModComp},
+described in Section~\ref{computation}, is used here.
+\item $T$ and $T'$ are function types {\tt $x$:$A$->$B$} and {\tt
+$x$:$A$->$B'$}, respectively, and {\tt Inclu\-sion} recursively
+makes progress on the goal
+\begin{Numath}
+\Nu{$x$:$A$, $y$:$B$ >> $y$ in $B'$}
+\end{Numath}%
+\end{itemize}
+The last case could be generalized to other type
+constructors.   {\tt Inclu\-sion} is called
+frequently, mostly by {\tt EqI} (see Section~\ref{derived}).  
+
+{\tt PolyMember}.  Deal with membership goals {\tt $t$~in~$T$} where $t$ is an
+instance of a definition that is of the second kind mentioned in
+Section~\ref{definitions}.  The tactic uses matching to compute terms with which
+to instantiate the typing lemma for the definition.  This results in a new
+hypothesis {\tt $t$~in~$T'$}.  If $T$ and $T'$ are not identical, {\tt
+Inclusion} is applied.  The subgoals usually produced by {\tt PolyMember} are to
+show that the arguments of the definition instance are of the appropriate type.
+{\tt
+PolyMember} can also be applied when the conclusion is a binary equality with
+both sides of the equality being instances of the same definition. In this case,
+the subgoals will be to prove that the corresponding arguments are equal in the
+appropriate types.
+
+{\tt MemberI}.  Make ``one step'' of progress on a membership goal {\tt
+$t$~in~$T$}.  What a ``step'' is depends on the outermost forms of $t$ and $T$.
+Generally, the steps are conservative, and if the step that is determined to be
+applicable fails, no other attempts are made.
+For some cases, what step to take is obvious.  For example, if $t$ is {\tt
+<$a$,$b$>}, and $T$ is {\tt $A$\#$B$}, then the step is to apply {\tt EqI} ({\em
+i.e.}, to apply the appropriate Nuprl equality-intro rule).  In other cases,
+there are several reasonable alternatives.  For example, if the goal is 
+\begin{Numath}
+\Nu{>> $f$($a$) in \{$x$:$A$|$B$\},}
+\end{Numath}%
+then {\tt EqI} might succeed.  But one can also proceed by analyzing the
+set-type, getting subgoals
+\begin{Numath}
+\Nu{>> $f$($a$) in $A$   {\rm and}   >> $B$[$f$($a$)/$x$].}
+\end{Numath}%
+{\tt MemberI} takes the second alternative (assuming {\tt PolyMember} does not
+apply).  However, if $T$ had not been explicitly a set type, but a term
+that {\em computed}, via at least one definition expansion, to a set type,
+then
+the first alternative would have been taken.  This heuristic has worked well in
+practice.  There are a few other simple heuristics used by {\tt MemberI}.  {\tt
+MemberI} is another one of the tactics that can be updated by the user; the user
+additions are tried first.  Also, as with {\tt PolyMember}, {\tt MemberI} can be
+applied to binary equalities when the outermost forms of both sides are the
+same.
+
+{\tt Member}.  Reduce the conclusion (without expanding definitions), then
+repeatedly apply {\tt MemberI} to membership goals where the member is not an
+induction form.  The reason for stopping at induction forms is that it is
+difficult to guess the types that are necessary to proceed.  Proceeding with bad
+guesses can often lead to false subgoals.  
+The conservative nature of {\tt Member} gives typechecking in Nuprl an
+interactive character; most of typechecking can be handled automatically, but
+occasionally the tactic will stop and require the user to make a
+decision.  Fortunately, in practice {\tt Member} is able to automatically prove
+almost all membership goals that most users would consider trivial.
+
+{\tt Autotactic}.  The autotactic cycles through the following, stopping when
+no further progress can be made.
+\begin{itemize}
+\item Decompose hypotheses that are conjunctions.
+\item Remove all top level applications of the squash operator in the hypothesis
+list.
+\item Apply {\tt Member}.
+\item Analyze set types in order to expose information for {\tt arith} and
+then apply it.  This fails if {\tt arith} fails.
+\item Analyze the conclusion ({\em i.e.}, apply an introduction step) if it is a
+conjunction or a function-type.
+\item Apply a member of a user-defined list.
+\end{itemize}
+(a second clause dealing with integer arithmetic is omitted).
+Except for {\tt Member} and the last clause, all the clauses of the
+autotactic are strongly
+valid: if a goal is provable, then each subgoal generated by the clause is also
+provable.  This property, the conservative nature of {\tt Member}, and the
+fact that little backtracking is done, make it feasible to apply the autotactic
+everywhere desired.  For example, users typically call it after almost every
+top-level application 
+of one of the tactics discussed in Section~\ref{derived}.
+
+\section{An Example From Number Theory}
+
+One of the first substantial developments of mathematics carried out in Nuprl
+was a proof of the fundamental theorem of arithmetic.  The complete
+self-contained library constructed for this theorem contains 113 objects, of
+which 59 are definitions and 54 are theorems.  36 of the definitions are
+common to most existing libraries; they are mostly definitions for logical
+notions.  There are 15 definitions dealing with
+basic list and integer relations and types, and 8 definitions which are 
+particular to the development of the fundamental theorem of arithmetic.
+
+Of the 54 theorems, 20 are associated with definitions in the way described
+in Section~\ref{definitions}.
+Most of the remaining theorems establish simple properties of the defined
+objects.  The fundamental theorem of arithmetic is formalized
+as the two Nuprl theorems
+\begin{Numath}
+\Nu{\mforall{}n:\{2..\}. \mexists{} l:PrimeFact where eval(l) = n}
+\end{Numath}%
+and
+\begin{Numath}
+\Nu{\mforall{} l1,l2:PrimeFact. eval(l1) = eval(l2) => l1 = l2 in Fact.}
+\end{Numath}%
+The first statement can be
+read as: {\em for every integer $n$ greater than or equal to 2 there is a prime
+factorization that multiplies out (or {\em evaluates}) to $n$}.  The second
+can be read as: {\em any two prime factorizations that evaluate to the same
+number are the
+same factorizations}.  
+
+The program extracted from the first theorem above is a function mapping
+numbers to prime factorizations.  This program is mostly developed in the
+proof of
+the following lemma (the theorem is just an instantiation of the lemma).
+%   THM >>  k:N.  n,i:{2..}
+%              where in & n-ik &  d:{2..(i-1)}. (d|n). 
+%           l:PrimeFact where eval(l) = n
+\begin{Numath}
+\NuColumn{%
+\Nu{\mforall{}k:N. \mforall{}n,i:\{2..\} where i$\le$n \& n-i$\le$k \& %
+\mforall{}d:\{2..(i-1)\}. $\neg$(d|n). }\\%
+\Nu{    \mexists l:PrimeFact where eval(l) = n}%
+}%
+\end{Numath}%
+This lemma is proved by induction on {\tt k} and suggests the algorithm used
+to compute prime factorizations.  If we let $P(i,n)$ be 
+\begin{Numath}
+\Nu{$i$$\le$$n$ \& \mforall{}d:\{2..($i$-1)\}. $\neg$(d|$n$),}%
+\end{Numath}%
+$t(i,n)$ be {\tt $n$-$i$}, and $R(n)$ be 
+\begin{Numath}
+\Nu{\mexists{}l:PrimeFact where eval(l) = $n$,}%
+\end{Numath}%
+then the lemma is equivalent to (omitting some types)
+\begin{Numath}
+\Nu{\mforall{}k,n,i. $P(\tid{i},\tid{n})$ \& $t(\tid{i},\tid{n})$$\le$k %
+=> $R(\tid{n})$.}% 
+\end{Numath}%
+If $P(i,n)$ and $t(i,n)=0$ then $n=i$ and $n$ is prime, so the base case of
+the inductive proof of this lemma follows.
+For the induction case,
+assume $P(i,n)$.  If $t(i,n)=0$ we are done, otherwise we compute $n'$ and $i'$
+such
+that $t(i',n')<t(i,n)$ and $P(i',n')$, and use the induction hypothesis.  The
+obvious choices for $i'$ and $n'$ are $i+1$ and $n$ in the case that $i$
+does not divide $n$, and $i$ and $n/i$ otherwise.  In the first case $R(n)$
+is proven by using the factorization given by $R(n')$; in the second, $i$ is
+added to that factorization.  
+
+It is possible to express as a theorem in Nuprl a general inductive schema
+for problems that can be phrased, as in this case, in terms of an
+``invariant'' $P$, a result assertion $R$ and a bounding function $t$
+(although such a schema was not used in our proof of the fundamental theorem of
+arithmetic).  One way of formulating such a schema is the
+following.
+% >> A,B:U1. P:(A#B)->U1. R:B->U1. t:(A#B)->Int.                       
+%      x:A#B. P(x) => 0<t(x)                                              
+%      & x:A#B. P(x) => R(x.2)                                            
+%                         y:A#B. P(y) & t(y)<t(x) & (R(y.2) => R(x.2))   
+%      & b:B. a:A. P(<a,b>)                                              
+%      => b:B. R(b)                                                       
+% \begin{Numath}
+% \NuColumn{%
+% \Nu{\N{}\mforall{}A,B:U1. \mforall{}P:(A\#B)->U1. \mforall{}R:B->U1. %
+% \mforall{}t:(A\#B)->Int.}\\%
+% \Nu{\N{}    \mforall{}x:A\#B. P(x) => 0<t(x)}\\%
+% \Nu{\N{}  \& \mforall{}x:A\#B. P(x) => R(x.2)}\\%
+% \Nu{\N{}                    \mvee \mexists{}y:A\#B. P(y) \& t(y)<t(x) \& %
+% (R(y.2) => R(x.2))}\\%
+% \Nu{\N{}  \& \mforall{}b:B. \mexists{}a:A. P(<a,b>)}\\%
+% \Nu{\N{}  => \mforall{}b:B. R(b)}%
+% }%
+% \end{Numath}%
+% >> A,B:U1. P:(A#B)->U1. R:B->U1. t:(A#B)->Int.              
+%      x:A#B. t(x) = 0 & P(x) => R(x.2)                          
+%      & x:A#B. P(x) & 0<t(x) =>                                 
+%           y:A#B. P(y) & 0t(y)<t(x) & (R(y.2) => R(x.2))       
+%      & b:B. a:A. 0t(<a,b>) & P(<a,b>)                        
+%      => b:B. R(b)                                              
+\begin{Numath}
+\NuColumn{%
+\Nu{\mforall{}A,B:U1. \mforall{}P:(A\#B)->U1. \mforall{}R:B->U1. %
+\mforall{}t:(A\#B)->Int.}\\%
+\Nu{\N  \mforall{}x:A\#B. t(x) = 0 \& P(x) => R(x.2) }\\%
+\Nu{\N  \& \mforall{}x:A\#B. P(x) \& 0<t(x) =>}\\%
+\Nu{\N      \mexists{}y:A\#B. P(y) \& 0\mleq{}t(y)<t(x) \& (R(y.2) => R(x.2))}\\%
+\Nu{\N  \& \mforall{}b:B. \mexists{}a:A. 0\mleq{}t(<a,b>) \& P(<a,b>)}\\%
+\Nu{\N  => \mforall{}b:B. R(b)}}
+\end{Numath}%
+To apply it to the lemma discussed above, we take $A$ and $B$ to be 
+{\tt \{2..\}} and $P$, $R$ and $t$ to be suitable modifications of what was
+given above. 
+
+All of the proofs in the fundamental theorem of arithmetic library were
+constructed using an early version of the tactic collection that was
+described in
+this chapter.  This early tactic collection was designed to be generally
+applicable; none of the tactics were designed to be specifically useful in
+number theory.
+
+The total time required to complete the library was about forty
+hours.  This includes all work relevant to the effort; in particular, it
+includes the time spent on entering definitions, on informal planning, on
+lemma discovery and aborted proof attempts, and on proving all the necessary
+results dealing with the basic arithmetic operators and relations.   
+The proofs contain a total of 879 refinement
+steps, most of which were entered manually (some were automatically applied
+by a primitive analogy tactic).
+
+The fundamental theorem of arithmetic was chosen as a first major experiment
+with Nuprl because it is widely recognized as a non-trivial theorem in
+elementary number theory, because it has interesting computational content,
+and because mechanical proofs of it have been performed in other systems.  It
+took approximately 8 weeks of effort to prove the theorem in the PLCV
+system.  PLCV is a natural deduction system for reasoning
+about PL/C programs which has powerful built-in support for arithmetical and
+propositional reasoning but no tactic mechanism or proof editor.  Boyer and
+Moore also conducted a proof of the fundamental theorem of
+arithmetic.  They do not say how long the effort took, but they do say in
+their book that a correctness proof of a tautology checker required twelve
+hours of effort, and that the fundamental theorem of arithmetic was without
+doubt the hardest theorem proved so far using their system.  A comparison
+with Boyer and Moore's proof is complicated by the fact that they started at
+a lower level by
+defining the integers and developing some elementary properties of numbers
+which are incorporated in Nuprl's {\tt arith}  procedure.  On the other hand,
+they also modified their system by adding heuristics for proving theorems in
+number theory.
+
+
+\section{Saddleback Search}
+
+in this section we will look at a simple programming problem.  The
+problem, whose solution has been called ``saddleback search'', is to
+efficiently find the location of a given integer in a matrix of
+integers whose rows and columns are sorted in non-decreasing order.
+The complete solution, including planning, took one afternoon. 
+
+The library that was constructed contains nine
+objects in addition to a set of basic definitions that is shared by most
+Nuprl
+libraries.  The first of the nine is a simple definition for matrix application:
+\begin{Numath}
+\Nu{$B$($i$,$j$) \mequiv $B$($i$)($j$)}
+\end{Numath}%
+This is not precisely as the definition would appear if it were viewed on a
+Nuprl screen; the parameters here are the italicized identifiers, whereas Nuprl
+uses angle brackets ({\em e.g.}, {\tt <B>} instead of $B$).  The second two
+objects (a theorem and a definition) together 
+give a definition of the proposition that an
+integer $x$ occurs
+in an $m$ by $n$ matrix $B$ in a column between $i$ and $p$ and in a row between
+$j$ and $q$: 
+\begin{Numath}
+\NuColumn{%
+\Nu{$x$\mmin$B$\{$m$,$n$\}($i$:$p$, $j$:$q$)  \mequiv}\\%
+\Nu{\mexists{}r:\{0..($m$-1)\}. \mexists{}s:\{0..($n$-1)\}. %
+where $B$(r,s)=$x$ \& $i$$\leq$r$\leq$$p$ %
+\&  $j$$\leq$s$\leq$$q$.}%
+}%
+\end{Numath}%
+The next two objects in the library
+define the property of an $m$ by $n$ matrix $B$ being sorted:
+\begin{Numath}
+\NuColumn{%
+\Nu{sorted($B$)\{$m$,$n$\}  \mequiv}\\%
+\Nu{\mforall{}j:\{0..($n$-1)\}. \mforall{}i,p:\{0..($m$-1)\}. %
+i<p  =>  $B$(i,j)$\leq$$B$(p,j) \&}\\%
+\Nu{\mforall{}i:\{0..($m$-1)\}. \mforall{}j,q:\{0..($n$-1)\}. j<q%
+  =>  $B$(i,j)$\leq$$B$(i,q).}%
+}%
+\end{Numath}%
+Following this are two ML objects which contain the definitions of two
+simple tactics called {\tt RowSorted} and {\tt ColSorted}
+which are used to apply the fact that a matrix is sorted.
+
+The final two objects in the library are
+the main theorem and a lemma.  The statement of the main theorem is
+% >> m,n:N+.  B:({0..(m-1)}->{0..(n-1)}->Int) where sorted(B{m,n}).  x:Int. 
+%          x  B{m,n}(0:(m-1), 0:(n-1))    (x  B{m,n}(0:(m-1), 0:(n-1)))
+\begin{Numath}
+\NuColumn{%
+\Nu{\mforall{}m,n:N+. \mforall{}B:(\{0..(m-1)\}->\{0..(n-1)\}->Int) %
+where sorted(B\{m,n\}).}\\%
+\Nu{\N{} \mforall{}x:Int. x\mmin{}B\{m,n\}(0:(m-1),0:(n-1)) %
+\mvee{} $\neg$(x\mmin{}B\{m,n\}(0:(m-1),0:(n-1)))}%
+}%
+\end{Numath}%
+The program extracted from a proof of this theorem is a function that when
+given inputs of the appropriate type produces an indication of whether or not
+$x$ occurs in the matrix $B$ together with, in the former case, the pair of
+integers which give the location of $x$.
+
+The algorithm implemented by our proof proceeds as follows.  Start at the
+lower left corner of the matrix ({\em i.e.}, at position $\Tuple{m-1,0}$).  If
+$x$ is equal to
+the matrix element $b$ at this position, then we are done.  If $x<b$ 
+then since the matrix is sorted $x$ must be smaller than everything in the
+last row, so we can throw away the last row and repeat the procedure with the
+smaller
+matrix.  Similarly, if $x>b$, then we can discard the first column and
+repeat. This algorithm has a simple recursive structure, where a solution for an
+upper-right block of the matrix can be found in terms of a solution for a
+smaller block obtained by deleting the bottom row or the leftmost column.  
+This is the motivation for the lemma:
+% >> m,n:N+. B:({0..(m-1)}->{0..(n-1)}->Int) where sorted(B{m,n}).  
+%    x:Int. k:N. i:{0..(m-1)}. j:{0..(n-1)} where i+(n-j) = k. 
+%         x  B{m,n}(0:i, j:(n-1))    (x  B{m,n}(0:i, j:(n-1)))
+\begin{Numath}
+\NuColumn{%
+\Nu{\mforall{}m,n:N+. \mforall{}B:(\{0..(m-1)\}->\{0..(n-1)\}->Int) %
+where sorted(B\{m,n\}).  }\\%
+\Nu{\N{}  \mforall{}x:Int.\mforall{}k:N. \mforall{}i:\{0..(m-1)\}. %
+\mforall{}j:\{0..(n-1)\} where i+(n-j) = k. }\\%
+\Nu{\N{}     x \mmin B\{m,n\}(0:i, j:(n-1))  \mvee  %
+$\neg$(x \mmin B\{m,n\}(0:i, j:(n-1)))}%
+}%
+\end{Numath}%
+This can be interpreted as asserting that for every $k$, we can find whether or
+not $x$ occurs in any upper-right block of $B$ that has a total of $k-1$ rows and
+columns.  
+
+
+The proofs that contain the development of the saddleback search algorithm are
+short enough to permit a complete presentation.  
+The proof of the main lemma is by induction on $k$, and the first step is shown in
+Figure~\ref{FirstStepAgain}.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top  \\{}
+\N{}>> \mforall{}m,n:N+. \mforall{}B:(\{0..(m-1)\}->\{0..(n-1)\}->Int) where sorted(B\{m,n\}).   \\{}
+\N{}     \mforall{}x:Int. \mforall{}k:N. \mforall{}i:\{0..(m-1)\}. \mforall{}j:\{0..(n-1)\} where i+(n-j) = k.  \\{}
+\N{}          x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (OnVar `k` (NonNegInd `l`) ...) \\{}
+\N{} \\{}
+\N{}1* 1. m: N+ \\{}
+\N{}   2. n: N+ \\{}
+\N{}   3. B: \{0..(m-1)\}->\{0..(n-1)\}->Int \\{}
+\N{}   4. x: Int \\{}
+\N{}   [5]. sorted(B\{m,n\}) \\{}
+\N{}   6. i: \{0..(m-1)\} \\{}
+\N{}   7. j: \{0..(n-1)\} \\{}
+\N{}   [8]. i+(n-j)=0  \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}2* 1. m: N+ \\{}
+\N{}   2. n: N+ \\{}
+\N{}   3. B: \{0..(m-1)\}->\{0..(n-1)\}->Int \\{}
+\N{}   4. x: Int \\{}
+\N{}   5. l: int \\{}
+\N{}   6. 0<l \\{}
+\N{}   7. \mforall{}i:\{0..(m-1)\}. \mforall{}j:\{0..(n-1)\} where i+(n-j)=l-1.  \\{}
+\N{}         x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)) \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{}   [8]. sorted(B\{m,n\}) \\{}
+\N{}   9. i: \{0..(m-1)\} \\{}
+\N{}   10. j: \{0..(n-1)\} \\{}
+\N{}   [11]. i+(n-j)=l in Int \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)))    
+\end{Screen}%
+\caption{By induction.}
+\label{FirstStepAgain} 
+\end{RuledFigure}
+The tactic used here performs induction on $k$, using $l$ as a new variable for
+the induction step.  The square brackets around some of the hypotheses in the
+subgoals indicate that the corresponding hypotheses are {\em hidden}.  A
+hidden hypothesis cannot be used in any way, and remains hidden through
+further rule applications until the conclusion has a computationally trivial
+form ({\em e.g.}, when it is an equality).
+
+The first subgoal is proved in two steps.  The first step, shown in 
+Figure~\ref{SetUpBaseContr}, is to
+assert that
+the hypotheses are contradictory and to expand types which are subsets.  
+The display of this step in Nuprl
+would show as part of the main goal the hypotheses numbered {\tt 1} to {\tt 8}
+shown in Figure~\ref{FirstStepAgain}. In
+the interest of compactness, these have been manually elided (replaced by
+the string ``{\tt{}...}'').  
+In addition, the system itself suppresses the display in subgoals
+of hypotheses that also appear in the goal.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 1 \\{}
+\N{}... \\{}
+\N{}>> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (Assert 'False' ...) THEN (Unsetify ...) \\{}
+\N{}     \\{}
+\N{}1* 1. m: Int \\{}
+\N{}   2. 0<m \\{}
+\N{}   3. n: Int \\{}
+\N{}   4. 0<n \\{}
+\N{}   8. i: Int \\{}
+\N{}   9. j: Int \\{}
+\N{}   11. 0 \mleq{} j \\{}
+\N{}   12. j \mleq{} n-1 \\{}
+\N{}   13. 0 \mleq{} i \\{}
+\N{}   14. i \mleq{} m-1 \\{}
+\N{}   >> False    
+\end{Screen}%
+\caption{The base case is contradictory.}
+\label{SetUpBaseContr} 
+\end{RuledFigure}
+The second step, shown in Figure~\ref{BaseCaseContr}, is to show that a
+contradiction can be inferred from the known equalities and inequalities.
+This is accomplished by using tactics based on the monotonicity rule to add
+hypothesis {\tt 10} to hypothesis {\tt 13}, and then to add $n$ to both sides
+of {\tt 13}.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 1 1 \\{}
+\N{}1. m: Int \\{}
+\N{}2. 0<m \\{}
+\N{}3. n: Int \\{}
+\N{}4. 0<n \\{}
+\N{}5. B: \{0..(m-1)\}->\{0..(n-1)\}->Int \\{}
+\N{}6. x: Int \\{}
+\N{}7. sorted(B\{m,n\}) \\{}
+\N{}8. i: Int \\{}
+\N{}9. j: Int \\{}
+\N{}10. i+(n-j)=0 in Int \\{}
+\N{}11. 0 \mleq{} j \\{}
+\N{}12. j \mleq{} n-1 \\{}
+\N{}13. 0 \mleq{} i \\{}
+\N{}14. i \mleq{} m-1 \\{}
+\N{}>> False \\{}
+\N{} \\{}
+\N{}BY (Mono 10 `+` 12 THEN MonoWithR 13 `+` 'n = n' ...) 
+\end{Screen}%
+\caption{Contradiction follows from known inequalities.}
+\label{BaseCaseContr} 
+\end{RuledFigure}
+
+The first step of the proof of the induction step (the second subgoal
+in Figure~\ref{FirstStepAgain}) is shown in
+Figure~\ref{MainCaseSplitAgain}.  
+In this step, we are considering the block of the
+matrix that extends from the top to row $i$ and from column $j$ to the right.  
+The induction hypothesis (hypothesis {\tt 7} in the second subgoal in
+Figure~\ref{FirstStepAgain})
+asserts the decidability of membership of $x$ in smaller blocks of $B$.
+As in the informal description of the algorithm, we do a case analysis
+on the relation between $x$ and $B(i,j)$.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 \\{}
+\N{}... \\{}
+\N{}>> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (Cases ['B(i,j)<x'; 'B(i,j)=x'; 'x<B(i,j)'] ...) \\{}
+\N{}    \\{}
+\N{}1* 12. B(i,j)<x \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}2* 12. B(i,j)=x \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}3* 12. x<B(i,j) \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)))       
+\end{Screen}%
+\caption{The main case split.}
+\label{MainCaseSplitAgain} 
+\end{RuledFigure}%
+The case where $B(i,j)=x$ is easy; we can justify the left disjunct by
+providing the coordinates where $x$ occurs.  This step is shown in
+Figure~\ref{TrivCase}.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 2 \\{}
+\N{}... \\{}
+\N{}12. B(i,j) = x \\{}
+\N{}>> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (ILeft THENW ITerms ['i';'j'] ...) 
+\end{Screen}%
+\caption{In this case, $x$ has been located.}
+\label{TrivCase}
+\end{RuledFigure}%
+For the case where $B(i,j)<x$, we want to discard column
+$j$ and use the induction hypothesis.  There is no point doing this if
+column $j$ is the last column, however, since in that case $x$ does not
+occur in the block being considered.  Hence we perform the case analysis shown
+in Figure~\ref{LastColTest}.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 1 \\{}
+\N{}... \\{}
+\N{}12. B(i,j)<x \\{}
+\N{}>> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (Cases ['j<n-1'; 'j = n-1'] ...) \\{}
+\N{}    \\{}
+\N{}1* 13. j<n-1 \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}2* 13. j = n-1 \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)))    
+\end{Screen}%
+\caption{Is the column to be discarded the last one?}
+\label{LastColTest} 
+\end{RuledFigure}
+
+Consider first the case where $j<n-1$.  As shown in Figure~\ref{UseIndHyp}, we
+apply the induction hypothesis to the smaller block of $B$ obtained by removing
+column $j$.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 1 1 \\{}
+\N{}... \\{}
+\N{}7. \mforall{}i:\{0..(m-1)\}. \mforall{}j:\{0..(n-1)\} where i+(n-j)=l-1.  \\{}
+\N{}      x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)) \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{}... \\{}
+\N{}12. B(i,j)<x \\{}
+\N{}13. j<n-1 \\{}
+\N{}>> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (InstHyp ['i'; 'j+1'] 7 ...) \\{}
+\N{}    \\{}
+\N{}1* 14. x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1)) \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1))) \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)))    
+\end{Screen}%
+\caption{Try to find $x$ in the smaller block of $B$ obtained by removing column $j$.}
+\label{UseIndHyp} 
+\end{RuledFigure}%
+Now, $x$ is in the larger block just in case it is in the smaller block
+(Figure~\ref{AnalyseIndHyp}).
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 1 1 1 \\{}
+\N{}... \\{}
+\N{}12. B(i,j)<x \\{}
+\N{}13. j<n-1 \\{}
+\N{}14. x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1)) \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1))) \\{}
+\N{}>> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (OnLastHyp CaseHyp THENL [ILeft;IRight] ...) \\{}
+\N{}    \\{}
+\N{}1* 14. x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1)) \\{}
+\N{}   >> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)) \\{}
+\N{} \\{}
+\N{}2* 14. \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1))) \\{}
+\N{}   15. x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)) \\{}
+\N{}   >> void    
+\end{Screen}%
+\caption{$x$ occurs if and only if it occurs in the smaller block.}
+\label{AnalyseIndHyp} 
+\end{RuledFigure}%
+The first case is shown in Figure~\ref{FoundInSmaller}.  If $x$ is in the
+smaller block, say at
+position $\Tuple{r,s}$, then it must also be in the larger block at
+position $\Tuple{r,s}$.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 1 1 1 1 \\{}
+\N{}... \\{}
+\N{}12. B(i,j)<x \\{}
+\N{}13. j<n-1 \\{}
+\N{}14. x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1)) \\{}
+\N{}>> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)) \\{}
+\N{} \\{}
+\N{}BY (OnLastHyp (CHThen (RepeatProductE ``r s``))  \\{}
+\N{}    THEN ITerms ['r'; 's'] ...)    
+\end{Screen}%
+\caption{If $x$ occurs in the smaller block, we're done.}
+\label{FoundInSmaller} 
+\end{RuledFigure}%
+The case where $x$ is not in the smaller block is handled in
+Figure~\ref{Gleep}.  We are assuming that $x$ must occur in the larger block,
+and need to obtain a contradiction.
+Let $r$ and $s$ be
+the position of $x$ in the larger block.  
+We need to know whether $\Tuple{r,s}$ is
+in column $j$ or in the smaller block, so we do the case analysis shown in 
+the figure.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 1 1 1 2 \\{}
+\N{}... \\{}
+\N{}12. B(i,j)<x \\{}
+\N{}13. j<n-1 \\{}
+\N{}14. \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1))) \\{}
+\N{}15. x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1)) \\{}
+\N{}>> void \\{}
+\N{} \\{}
+\N{}BY (OnLastHyp (CHThen (RepeatProductE ``r s``))  \\{}
+\N{}    THEN Cases ['s = j'; 'j<s'] ...) \\{}
+\N{}    \\{}
+\N{}1* 15. r: \{0..(m-1)\} \\{}
+\N{}   16. s: \{0..(n-1)\} \\{}
+\N{}   17. s = j \\{}
+\N{}   18. j \mleq{} s  \\{}
+\N{}   19. s \mleq{} n-1 \\{}
+\N{}   20. B(r,s)  =  x \\{}
+\N{}   21. 0 \mleq{} r \\{}
+\N{}   22. r \mleq{} i \\{}
+\N{}   >> void \\{}
+\N{} \\{}
+\N{}2* 15. r: \{0..(m-1)\} \\{}
+\N{}   16. s: \{0..(n-1)\} \\{}
+\N{}   17. j<s \\{}
+\N{}   18. j \mleq{} s  \\{}
+\N{}   19. s \mleq{} n-1 \\{}
+\N{}   20. B(r,s)  =  x \\{}
+\N{}   21. 0 \mleq{} r \\{}
+\N{}   22. r \mleq{} i \\{}
+\N{}   >> void    
+\end{Screen}%
+\caption{$x$ does not occur in the smaller block.  
+Suppose it occurs at $\Tuple{r,s}$ the larger block.  
+We need to know whether $\Tuple{r,s}$ is in column $j$.}
+\label{Gleep} 
+\end{RuledFigure}
+The first case, where $s=j$, is shown in Figure~\ref{ColSortedContr}; a
+contradiction 
+follows from the fact that column $j$ is sorted (and so $B(r,j) \leq B(i,j)$).  
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 1 1 1 2 1 \\{}
+\N{}... \\{}
+\N{}8. sorted(B\{m,n\}) \\{}
+\N{}... \\{}
+\N{}12. B(i,j)<x \\{}
+\N{}13. j<n-1 \\{}
+\N{}14. \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1))) \\{}
+\N{}15. r: \{0..(m-1)\} \\{}
+\N{}16. s: \{0..(n-1)\} \\{}
+\N{}17. s = j \\{}
+\N{}18. j \mleq{} s  \\{}
+\N{}19. s \mleq{} n-1 \\{}
+\N{}20. B(r,s)  =  x \\{}
+\N{}21. 0 \mleq{} r \\{}
+\N{}22. r \mleq{} i \\{}
+\N{}>> void \\{}
+\N{} \\{}
+\N{}BY (ColSorted 'j' 'r' 'i' 8 ...) 
+\end{Screen}%
+\caption{The contradiction follows from the fact that column $j$ is 
+sorted.}
+\label{ColSortedContr} 
+\end{RuledFigure}%
+In the second case, shown in Figure~\ref{SmallerBlockContr}, we get a
+contradiction to hypothesis {\tt 14} by showing that $x$ does occur in
+the smaller block. 
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 1 1 1 2 2 \\{}
+\N{}... \\{}
+\N{}12. B(i,j)<x \\{}
+\N{}13. j<n-1 \\{}
+\N{}14. \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j+1:(n-1))) \\{}
+\N{}15. r: \{0..(m-1)\} \\{}
+\N{}16. s: \{0..(n-1)\} \\{}
+\N{}17. j<s \\{}
+\N{}18. j \mleq{} s  \\{}
+\N{}19. s \mleq{} n-1 \\{}
+\N{}20. B(r,s)  =  x \\{}
+\N{}21. 0 \mleq{} r \\{}
+\N{}22. r \mleq{} i \\{}
+\N{}>> void \\{}
+\N{} \\{}
+\N{}BY (E 14 THENO ITerms ['r';'s'] ...) 
+\end{Screen}%
+\caption{$\Tuple{r,s}$ must be in the smaller block, contradicting 14.}
+\label{SmallerBlockContr} 
+\end{RuledFigure}
+This finishes the proof of the case where $j<n-1$.
+
+In the case where $j=n-1$, we prove (Figure~\ref{AtLastColContr})
+that $x$ does not occur by contradiction.
+If it occurred at position $\Tuple{r,s}$, say, then the fact that column $j$ is
+column sorted would give us $B(r,j) \leq B(i,j)$, from which a
+contradiction is immediate.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 2 1 2 \\{}
+\N{}... \\{}
+\N{}8. sorted(B\{m,n\}) \\{}
+\N{}... \\{}
+\N{}12. B(i,j)<x \\{}
+\N{}13. j = n-1 \\{}
+\N{}>> x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))  \mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:i, j:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (IRight ...)  \\{}
+\N{}   THEN (OnLastHyp (CHThen (RepeatProductE ``r s``)) ...) \\{}
+\N{}   THEN (ColSorted 'j' 'r' 'i' 8 ...) 
+\end{Screen}%
+\caption{When $j$ is the last column of $B$, $x$ does not occur,
+since if it did, 
+the fact that column $j$ is sorted would be contradicted.}
+\label{AtLastColContr} 
+\end{RuledFigure}
+
+This completes the proof in the case that $B(i,j)<x$.  The case $x<B(i,j)$ is
+analogous, so it will not be discussed.  Except for this analogous branch, the
+figures we have given cover the entire Nuprl proof of the lemma.  
+
+The main theorem follows in two steps from the lemma.  The first step, shown in
+Figure~\ref{MainThm}, is to instantiate the lemma using $m+n-1$, $m-1$, and $0$
+for $k$, $i$, and $j$ respectively.  The final step (Figure~\ref{MainThmContr})
+is to remove $n$ from the inequality in hypothesis {\tt 6}.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top  \\{}
+\N{}>> \mforall{}m,n:N+. \mforall{}B:(\{0..(m-1)\}->\{0..(n-1)\}->Int) %
+where sorted(B\{m,n\}). \mforall{}x:Int. \\{}
+\N{}      x \(\epsilon{}\) B\{m,n\}(0:(m-1), 0:(n-1))  %
+\mvee{}  \mneg{}(x \(\epsilon{}\) B\{m,n\}(0:(m-1), 0:(n-1))) \\{}
+\N{} \\{}
+\N{}BY (Id ...) THEN  \\{}
+\N{}   (LemmaUsing `saddleback\_lemma` ['m+n-1'; 'm-1'; '0'] ...) \\{}
+\N{} \\{}
+\N{}1* 1. m: N+ \\{}
+\N{}   2. n: N+ \\{}
+\N{}   3. B: \{0..(m-1)\}->\{0..(n-1)\}->Int \\{}
+\N{}   4. sorted(B\{m,n\}) \\{}
+\N{}   5. x: Int \\{}
+\N{}   6. m+n-1<0 \\{}
+\N{}   >> void    
+\end{Screen}%
+\caption{Use the main lemma, with $m+n-1$ for the bound, $m-1$ for starting 
+row $i$, and $0$ for the starting column $j$.}
+\label{MainThm} 
+\end{RuledFigure}
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}* top 1 \\{}
+\N{}1. m: N+ \\{}
+\N{}2. n: N+ \\{}
+\N{}3. B: \{0..(m-1)\}->\{0..(n-1)\}->Int \\{}
+\N{}4. sorted(B\{m,n\}) \\{}
+\N{}5. x: Int \\{}
+\N{}6. m+n-1<0 \\{}
+\N{}>> void \\{}
+\N{} \\{}
+\N{}BY (MonoWithR 6 `-` '0<n' ...) 
+\end{Screen}%
+\caption{Subtract {\tt 0<n} from hypothesis 6, getting {\tt m-1<0},
+contradicting {\tt m>0}.} 
+\label{MainThmContr} 
+\end{RuledFigure}
+
+For completeness we show in Figure~\ref{ColSorted} one of the two ML objects
+in the lbirary.  This object defines the tactic {\tt ColSorted} which was
+used in the steps shown in Figures~\ref{ColSortedContr}
+and~\ref{AtLastColContr}.  This tactic was written to shorten the proof, and
+its function is to instantiate the property {\tt sorted(B\{m,n\})} on two
+positions within a single column.  The second ML object defines an analogous
+tactic {\tt RowSorted}.
+\begin{RuledFigure}
+\begin{Screen}{1}{\SnapshotSize}
+\N{}  let ColSorted col row1 row2 i p =\\{}
+\N{}    let n = number\_of\_hyps p  in\\{}
+\N{}    ( CH i \\{}
+\N{}      THEN (E i)\\{}
+\N{}      THEN InstantiateHyp [col; row1; row2] (n+1)\\{}
+\N{}      THEN Thinning [n+1; n+2]\\{}
+\N{}    ) p\\{}
+\N{}  ;; 
+\end{Screen}%
+\caption{One of two simple tactics.}
+\label{ColSorted} 
+\end{RuledFigure}

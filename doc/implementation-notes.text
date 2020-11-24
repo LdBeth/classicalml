@@ -1,0 +1,99 @@
+
+
+			 Implementation Dependencies
+			 ---------------------------
+
+Almost all of Nuprl is implemented in vanilla Common Lisp.  The exceptions
+are described in this document.  
+
+The environment dependencies are broken down into two categories.  The
+first category consists of a few dependencies that will likely need to
+be dealt with if you want to run Nuprl with a
+machine/operating-system/lisp combination significantly different from
+the ones we have used.  The second consists of dependencies that are
+unlikely to cause problems (such as Symbolics-specific tunings).
+
+
+Important Dependencies
+----------------------
+
+
+1.  File-name extensions.  In the file nuprl:sys;defsystem there are two
+constants defined for the file-name extensions the host Lisp expects for
+Lisp source and binary files.  
+
+2.  Key bindings (X-windows only).  The "keypad" key bindings for
+Nuprl's special characters assume the existence of a "meta" key ("right"
+and "left" on Suns).  If your machine does not have these keys, and if
+you want the keypad---it's not necessary since the keypad duplicates
+other key bindings---you will have to modify the file
+nuprl:sys;prl;x-win to set up alternative bindings.  In this file there
+is a section headed by a comment "Nuprl Key Bindings" in which the
+bindings are made using the function define-key-binding.  This function
+takes three arguments: (1) modifiers: nil, or one of the keywords:
+:control :meta :hyper :super, or a list containing some of these
+keywords, (2) the character labelling the key, and (3) the internal
+Nuprl character being bound to the key.  For example, the binding of
+control-S to Nuprl's "select" function is made by
+
+             (define-key-binding :control #\s '(SEL))
+
+The internal characters have a reasonable mnemonic correspondence to the
+function they are related to.
+
+
+
+
+Less Significant Dependencies
+-----------------------------
+
+Except for the window interface, all the environment dependencies described
+below use read-time conditionals (e.g. #+symbolics).
+
+1.  The window interface.  There are three separate files for the window
+interface.   The file sun-win is for the Sun Common Lisp environment with the
+SunView (SunTools) interface.  The file lispm-win is for the Symbolics lisp
+machine (36xx or MacIvory).  The file x-win is for CLX.
+
+2.  defsystem and dependent.  These two files contain most of the environment
+dependent code.  Almost all of what is implemented in these files have
+acceptable defaults in the vanilla case.  This category includes objects
+related to the following.
+    - functions for compiling lisp files and forms (some lisps allow
+      suppression of annoying messages).
+    - some special printing characters (the default is none) and related
+      stuff (Latex macros etc).
+    - a Symbolics lispm command for invoking Nuprl (it can always be
+      invoked via "(nuprl)").
+    - an ML top loop for Symbolics lispms that can be used in a Lisp
+      Listener. 
+    - a macro for disabling the conversion of lower case letters to upper case
+      when reading a library.  This is useful for (very) old libraries which
+      were dumped without slashification.  This feature is not necessary
+      since there is a function for converting old libraries
+      (fix-old-library). 
+    - printing the nuprl herald
+    - computing the name of the local host and the X-server Nuprl
+      is connected to.  These two functions (local-host and X-host)
+      are useful in nuprl-init files.  
+
+There are a few things that may need to be modified for new environments.
+    - complete-nuprl-path:  this function, which takes a list of directory
+      names and a file name and returns a pathname, is currently only
+      implemented for Symbolics and Unix machines.
+    - CLX related patch.  Some minimal Common Lisps do not support char-bits.
+      These lisps require (or did in our version of CLX) a patch to the
+      xlib:default-keysym-translate function so that it returns a list
+      representation of control and meta characters.  Currently, this patch
+      only takes effect in KCL.  Another CLX patch, again only for KCL, is to 
+      the keysym hashtable (the keys are numbers but eq was the test).
+
+3.  Declarations.  The files nuprl:sys;ml;convert and
+nuprl:sys;ml;translate contain some declarations (for efficiency)
+specific to the Symbolics lisp machine.
+
+4.  ML.  The file "compiler" has two parts.  One half is a generic
+version in Common Lisp, and the other is a version tuned to Symbolics
+36xx and MacIvory machines.  The file "runtime" also has some Symbolics
+tunings.
+

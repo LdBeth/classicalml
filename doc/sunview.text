@@ -1,0 +1,66 @@
+		     Nuprl on a Sun using SunView
+		     ============================
+
+To compile, load or run Nuprl on a Sun using the SunView window system,
+you must be running Lucid Common Lisp with the "windows" package loaded,
+and the working directory of lisp must be the root of the file system
+tree containing Nuprl.  Loading and compiling were described earlier.
+To invoke Nuprl, just evaluate the form
+
+(nuprl)
+
+The main Nuprl screen will come up; Nuprl will accept input only when
+the mouse is over this screen.  The screen can be moved, but DO NOT
+attempt to reshape it.  There are several parameters that can be set in
+your init file (nuprl-init.lisp) that relate to the size of the Nuprl
+screen.  The values of the parameters *default-frame-width* and
+*default-frame-height* (default values are 120 and 60 respectively) give
+the width and height (in terms of characters, not pixels) of the Nuprl
+screen.  You can set these in your init file using setq, e.g.
+
+(setq *default-frame-height* 90)
+
+The book refers to a keypad and other special keys.  On the Sun the Nuprl
+keypad is simulated, but it is anticipated that this keypad will not be used
+much by most users.  The keypad is obtained by typing ^Q.  After this is
+typed, the keyboard goes into "keypad mode", and the nine keys
+    U I O
+    J K L
+    M , .  
+
+become the keypad.  If "." is pressed, the keyboard reverts to its
+normal state.  If a non-keypad character is pressed, the keyboard
+reverts to its normal state, and, in addition, whatever was typed enters
+the input stream as usual.  For more on the keypad, see page 43 of the
+book.  Some of the most commonly used keys of Nuprl's keypad are also
+bound to other keys, so that they can be used without going into keypad
+mode.  In particular, the arrow keys on the Sun keypad can be (maybe)
+used as the arrow keys of Nuprl's keypad.  Sun's autorepeat feature (a
+key repeats if held down) is especially useful with the arrow keys.  See
+the help window (see below) for a list of the special keys.
+
+Information on window operations can be obtained by right-clicking, and
+then clicking on "Help" in the menu that pops up.  The "Help" window
+that comes up describes briefly the function of the mouse buttons, the
+meaning of the other items on the menu that "Help" was selected from,
+and gives the association between certain special keys and the special
+keys referred to in the Nuprl book (e.g., ^Z functions as Nuprl's
+command key CMD).  The "snapshot" window operation appends a printout of
+the visible window contents to the current snapshot file.  The default
+file is "snapshot.text" in the current users home directory; to change
+the snapshot file, use the ML function "set_snapshot_file".
+
+The left and middle buttons of the mouse can be used in place of the SEL
+(SELECT) and JUMP keys of the keypad (see page 43 of the book).  Thus
+mouse-left can be used for selecting a rule template to open and for
+selecting endpoints of chunks of text; and mouse-middle can be used for
+moving the text cursor about.  The middle and left buttons also have
+other uses.  See the "Changes to the User Interface" section of
+doc/changes for a description of all of these other uses.
+
+By using the ESCAPE key one can obtain some special characters (such as
+some of the Greek letters -- see the help window).  These characters
+should only be used on the left hand sides of the templates in Nuprl
+definitions.
+
+

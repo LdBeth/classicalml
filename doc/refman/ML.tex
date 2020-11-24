@@ -1,0 +1,825 @@
+\chapter{The Metalanguage}
+
+\label{ML}
+
+The programming language ML is a metalanguage for Nuprl's type
+theory.  Its main use is to write programs called {\em tactics} that
+automate the proof construction process.  
+
+ML is not documented here.  The version of ML used in Nuprl is a minor
+variant of
+the ML used in the Edinburgh LCF system.  This is documented in the book
+{\em Edinburgh LCF: A Mechanized Logic of Computation}, M.\ Gordon, R.\
+Milner and C.\ Wadsworth, Springer-Verlag LNCS 78, 1979.  The language is
+partially documented in the Nuprl book, which also gives some examples of
+tactics.
+
+In this section we describe the embedding of Nuprl's logical apparatus
+within ML, and the structure of the tactic mechanism.  Many of the
+details, such as ML primitives corresponding to the rules of the type
+theory, and various utilities for accessing libraries and printing, are
+left to appendices.
+
+In what follows, as well as in Appendix~\ref{MLExts},
+a description of an ML 
+function will usually begin with an application of the
+function to a list of typed
+formal arguments.  For example, the {\tt max} function might be presented
+as
+\begin{quote}
+{\tt max(x: int, y:int): int}.  \rm The maximum of \tid{x} and \tid{y}.
+\end{quote}
+This indicates that the type of max is {\tt int->int->int}. 
+
+\section{Nuprl ML versus LCF ML}
+
+The ML used by Nuprl has been adapted from the ML of LCF.  The changes are
+as follows.
+\begin{itemize}
+
+\item All components related to LCF's logic have been removed, including
+the term-quotation facility.  
+
+\item New primitive functions and datatypes have been added (these are
+documented below).  
+
+\item New facilities for naming constants have been added.  In particular,
+single forward quotes (``\tid{'}'') are used to delimit the text of Nuprl
+terms, and a string enclosed in double backquotes (``\tid{`}'') is
+interpreted as the list of tokens obtained by breaking the string into
+words according to the occurrences of blanks.
+
+\item The names of the functions mapping between an abstract type and its
+implementation type have an underscore added.
+
+\end{itemize}
+
+
+\section{Basic Types in ML for Nuprl}
+
+In specializing the ML language to Nuprl
+we have made each of the {\em kinds} of
+objects that occur in the logic into ML types.   These types are abstract
+in the sense of the abstract type mechanism of ML, except that they are
+defined in the implementation of ML.  Objects of the types can be created
+or accessed only through the provided functions.  
+
+There are four such types: {\tt term}, \tid{declaration}, \tid{rule} and
+\tid{proof}.  The polymorphic equality test \tid{=} of ML has been extended
+to these types in the following way.  Two objects of type {\tt term} are
+equal if and only if they are $\alpha$-convertible variants of each other.
+That is, they are equal if and only if the bound variables can be renamed
+so that the terms are identical.  Unfortunately, equality on proofs does
+not respect term equality.  Two objects of type {\tt proof} are equal if
+they are {\em identical}.  In particular, two proofs which differ only
+because of renaming of some bound variables will {\em not} be equal in ML.
+Two objects of type {\tt rule} (or {\tt declaration}) are equal if and only
+if they are identical.
+
+\subsection*{\tt term}
+
+The type {\tt term} is the type of terms of Nuprl's logic.
+
+\manentry{term\_kind(t:term): tok}   A token naming the kind of term
+\tid{t} is.  For example, if \tid{t} is the term $2+3$ then the result is
+the token \tid{`ADDITION`}.  Possible results are: {\tt UNIVERSE},
+{\tt VOID}, {\tt ANY}, {\tt ATOM}, {\tt TOKEN}, {\tt INT}, {\tt
+NATURAL-NUMBER}, {\tt MINUS}, {\tt ADDITION}, {\tt SUBTRACTION},
+{\tt MULTIPLICATION}, {\tt DIVISION}, {\tt MODULO}, 
+{\tt INTEGER-INDUCTION}, {\tt LIST}, {\tt NIL}, {\tt CONS}, 
+{\tt LIST-INDUCTION}, {\tt UNION}, {\tt INL}, {\tt INR}, {\tt DECIDE}, {\tt
+PRODUCT}, {\tt PAIR}, {\tt SPREAD}, {\tt FUNCTION}, {\tt LAMBDA}, {\tt
+APPLY}, {\tt QUOTIENT}, {\tt SET}, {\tt EQUAL}, {\tt AXIOM}, {\tt
+VAR}, {\tt BOUND-ID}, {\tt TERM-OF-THEOREM}, {\tt
+ATOMEQ}, {\tt INTEQ}, {\tt INTLESS}, and \tid{TAGGED}.
+
+\smallskip
+
+Each kind of term has associated with it three functions: a recognizer, a
+destructor, and a constructor.  For example, for addition terms we have the
+following.
+
+\manentry{is\_addition\_term(t:term): bool}  
+
+\manentry{destruct\_addition\_term(t:term): term\#term}  Fails if \tid{t}
+is not an addition term.
+
+\manentry{make\_addition\_term(a:term, b:term): term}
+
+\smallskip
+
+The analogous functions for the other term kinds are documented in
+Appendix~\ref{MLExts}.  A constructor will fail if the result would not be
+a term, such as if \tid{make\_universe\_term} were applied to a negative number.
+Nuprl definitions appearing in a term are invisible to ML.
+
+\note{Evaluating term-of}
+
+In addition to the individual term constructors, term quotes may be used to
+specify terms in ML.  For example, the ML expression 
+\begin{quote}
+\tt '2+3'
+\end{quote}
+is of type \tid{term} and has as its value the term $2+3$.  
+Note that these quotation marks are
+different from those used for tokens in ML.  {\em Warning.}  Term quotes
+can {\em not} be used in ML {\em files}.  They can only be used in ML
+library objects or in ML mode.  
+
+
+    
+\subsection*{\tt rule}
+
+This is the type of (names of) \prl\ refinement rules.  
+The constructors for this type do not correspond
+precisely to the rules in \nuprl.  Refinement rules in \prl\ are usually
+entered in the proof editor
+as ``{\tt intro}'', ``{\tt elim}'', ``{\tt hyp}'', etc.  Strictly
+speaking, the notation ``{\tt intro}'' refers not to a single refinement
+rule but to a collection of introduction refinement rules, and the context
+of the proof is used to disambiguate the intended introduction rule at the
+time the rule is applied to a sequent.  There is a similar ambiguity with
+the other {\em names} of the refinement rules.  In addition to this
+ambiguity, the various sorts of the rules require different additional
+arguments.  Because rules in ML may exist independently of the proof
+context that allows the particular kind of rule to be determined, and
+because functions in ML are required to have a fixed number of arguments,
+the rule constructors have been subdivided beyond the ambiguous classes
+that are normally visible to the \prl\ user.  For example, there are
+constructors like {\tt universe\_intro\_integer}, {\tt product\_intro} and
+{\tt function\_intro}, all of which are normally designated in proof
+editing with {\tt intro}.  
+These rule constructors are given in Appendix~\ref{MLExts}.  
+
+There is also a generic constructor that can be used when the 
+proof context is known.
+
+\manentry{parse\_rule\_in\_context(x:tok, p:proof):rule}  
+This function uses the same
+parser that is used when a rule is typed into the proof editor.  
+
+\smallskip
+
+There are no destructors, but there are several marginally useful functions
+which do a limited amount of rule analysis.  The first two are used in the
+transormation tactic \tid{copy}.
+
+\manentry{get\_assum\_number(r:rule): int}  If \tid{r} is a rule which refers to
+a single hypothesis, return the number of the hypothesis.
+
+\manentry{set\_assum\_number(r:rule, i:int): rule}  If \tid{r} is as above, modify
+the rule to refer to the hypothesis numbered \tid{i}.
+
+\manentry{rule\_kind(r:rule): tok} The ``kind'' of \tid{r}.  At present
+this is the internal name of the rule, which is not necessarily the same as
+what appears in the name of the corresponding rule constructor.  The actual
+names are not documented here.
+
+
+\subsection*{\tt declaration}
+
+This is the type of \prl\ bindings that occur in proofs.  A declaration
+associates a variable with a type (term).  The declarations in a \prl\
+sequent occur on the left of the {\tt >>}.
+
+
+\manentry{construct\_declaration(x:tok, T:term): declaration}  
+A declaration where the
+variable \tid{x} is associated with the type \tid{T}.
+
+\manentry{destruct\_declaration(d:declaration): tok\#term}
+
+\manentry{id\_of\_declaration(d:declaration): tok}
+
+\manentry{type\_of\_declaration(d:declaration): term}
+
+\subsection*{\tt proof}
+
+This is the type of partial \nuprl\ proofs.  Proofs have the structure
+described in Section~\ref{Overview}.  The related constructors, destructors
+and predicates are given below.  The fact that (non-degenerate) proofs can
+only be built via the refinement functions guarantees that all objects of
+type \tid{proof} represent proofs.
+
+\manentry{hypotheses(p:proof): declaration list} 
+The hypotheses of the root sequent of the proof \tid{p}. 
+
+\manentry{conclusion(p:proof): term} 
+The term to the right of the turnstile (\tid{>>}) in the root sequent
+of \tid{p}.
+
+\manentry{refinement(p:proof): rule}  The rule at the root of \tid{p}, if
+one is present (otherwise fail).
+
+\manentry{children(p:proof): proof list}  The children of the root of
+\tid{p}.  The function fails if there is no refinement.
+
+\manentry{refine(r:rule): tactic}  The type \tid{tactic} is described in the
+next section.  It is defined as the type
+\begin{quote}
+\tt proof -> proof list \# (proof list -> proof).
+\end{quote}
+The function {\tt refine(r)} when 
+applied to a proof $p$ applies the rule \tid{r}
+to the sequent $s$ at the root of $p$.  This either generates a list $l$ of
+subgoals according to the specifications given in Chapter~\ref{Rules}, or,
+in the case the rule is inapplicable, fails.  The result of \tid{refine(r)(p)}
+is the pair $(l,f)$ where $f$ is a function (called a {\em validation})
+that takes a list \id{pl} of proofs, checks whether the list of root
+sequents is equal to $l$ (failing if not), and if so creates a new proof
+whose root sequent is the root sequent of $p$, whose refinement rule is
+$r$, and whose children are \id{pl}.
+
+The composition of \tid{refine} with \tid{parse\_rule\_in\_context} (see
+above) can be used to simulate the proof editor, where a string is
+interpreted as a specification of a rule.
+
+
+\section{Tactics}
+
+
+
+
+
+The type of tactics is
+\begin{verbatim}
+    tactic = proof -> proof list # (proof list -> proof),
+\end{verbatim}
+The component of a tactic that has type \tid{proof list -> proof} is
+called the {\em validation}.  The basic idea is that a tactic decomposes a
+goal proof $g$ into a finite (possibly empty) list of subgoals, $g_1,\ldots
+,g_n$, and also produces a validation $v$ which ``jusfifies'' the reduction
+of the goals to the subgoals.  The subgoals are degenerate proofs, i.e.,
+proofs which have only the top-level sequent filled in and have no
+refinement rule or subgoals.  We say that a proof $p_i$ {\em achieves} the
+subgoal $g_i$ if the top-level sequent of $p_i$ is the same as the
+top-level sequent of $g_i$.  The validation, $v$, is supposed to take a
+list $p_1,\ldots ,p_n$, where each $p_i$ achieves $g_i$, and produce a
+proof $p$ that achieves $g$. (Note that wherever we speak of proof in the
+context of ML, we mean possibly incomplete proofs.)  Because of the
+combinator language for tactic construction it is rarely necessary to
+explicitly refer to validations.
+
+
+\subsection*{Tacticals}
+
+Tacticals allow existing tactics
+to be combined to form new tactics.
+
+
+\begin{description}
+
+\item[{\tt IDTAC:}]
+{\tt IDTAC}\index{\IDTAC\ tactic}{}
+is the identity\index{identity tactic}{} tactic.  The result of
+applying {\tt IDTAC} to a
+proof is one subgoal, the original proof, and a validation that, when
+applied to an achievement of the proof, returns the achievement.  
+
+\item [{\tt $tac_1$ THEN $tac_2$:}]
+The {\tt THEN}\index{\THEN\ tactical}{}
+tactical is the composition functional for tactics.
+{\tt $tac_1$ THEN $tac_2$} defines a tactic
+which when invoked on a proof first applies $tac_1$ and then, to each
+subgoal produced by $tac_1$, applies $tac_2$.
+
+\item [{\tt $tac$ THENL $tac\_list$:}] The {\tt THENL}\index{\THENL\ tactical}{}
+tactical is similar to the
+{\tt THEN} tactical except that the second argument is a list of tactics
+rather than just one tactic.  The resulting tactic applies $tac$, and
+then to each of the subgoals (a list of proofs) it applies the corresponding
+tactic from $tac\_list$.  If the number of subgoals is different from
+the number of tactics in $tac\_list$, the tactic fails.
+
+
+\item [{\tt $tac_1$ ORELSE $tac_2$:}]  The
+{\tt ORELSE}\index{\ORELSE\ tactical}{} tactical creates a tactic
+which when applied to a proof first applies $tac_1$.  If this application
+fails, or fails to make progress,
+then the result of the tactic is the application of $tac_2$ to the
+proof.  Otherwise it is the result that was returned by $tac_1$.  This
+tactical gives a simple mechanism for handling failure of tactics.
+
+\item [{\tt REPEAT $tac$:}]   The {\tt REPEAT}\index{\REPEAT\ tactical}{}
+tactical  will repeatedly apply
+a tactic until the tactic fails.  That is, the tactic is applied to the goal
+of the argument proof, and then to the subgoals produced by the tactic, and
+so on.  The {\tt REPEAT} tactical will catch all failures of the argument
+tactic and can not generate a failure.
+
+
+\item [{\tt COMPLETE $tac$:}]  The {\tt COMPLETE}\index{\COMPLETE\ tactical}{}
+tactical constructs a tactic
+which operates exactly like the argument tactic except that the new tactic
+will fail unless a {\em complete} proof was constructed by $tac$, i.e.,
+the subgoal list is null.  
+
+\item [{\tt PROGRESS $tac$:}] The {\tt PROGRESS}\index{\PROGRESS\ tactical}{}
+tactical constructs a tactic
+which operates exactly like the argument tactic except that it fails unless
+the tactic when applied to a proof makes some progress toward a proof.  In
+particular, it will fail if the subgoal list is the singleton list
+containing exactly the original proof.  
+
+\item [{\tt TRY $tac$:}]  The {\tt TRY}\index{\TRY\ tactical}{}
+tactical constructs a tactic which
+tries to apply $tac$ to a proof; if this fails it returns the result
+of applying {\tt IDTAC} to the proof.  This insulates the context in which
+{\em tac} is being used from failures.  This is often
+useful for the second argument of an application of the {\tt THEN}
+tactical.
+
+\end{description}
+
+
+
+
+\section{Print Representation}
+
+There are two kinds of functions to convert Nuprl syntactic objects
+into string representations.  One converts objects to ML tokens, and the
+other builds a representation in a file.
+
+\manentry{term\_to\_tok(t:term): tok}  A string similar to what would
+appear in a Nuprl window.  Note that this may include the display forms of
+Nuprl definitions, and so there is no inverse function to recover \tid{t}
+from the string.  This remark applies also to the following two functions.
+
+\manentry{rule\_to\_tok(r:rule): tok}
+
+\manentry{declaration\_to\_tok(d:declaration): tok}
+
+\manentry{print\_term(t:term): void}
+Print \tid{t} in the command window.  This works only in ML mode.
+
+\manentry{print\_rule(r:rule): void}
+Print a representation of \tid{r} in the command window.
+
+\manentry{print\_declaration(d:declaration): void}
+
+
+
+\manentry{latexize\_file(input\_file: tok; output\_file: tok): void} Create
+a source file for Latex.  The \tid{input\_file} must be the result of
+\tid{mm}, \tid{ppp}, \tid{print\_library} or a ``snapshot'' (\PRINT).  The
+flag described next must have been set appropriately.
+
+\manentry{set\_output\_for\_latexize(flag: bool) : void} This sets a flag
+which may be ignored if ``special'' characters are not used.  (Special
+characters are the ones outside the standard character set that require
+Nuprl's fonts in order to be printed.)  If the output from \tid{mm},
+\tid{ppp}, \tid{print\_library} or a snapshot command (see below) is to be
+run through latexize\_file then the flag should be set to \id{true}.  If
+the output is to be treated as standard ascii text then the flag should be
+set to false.  The difference in the two kinds of output is in how special
+characters are treated.  In the first case they are written out using a
+code (usually a control character); \tid{latex\_file} will convert these to
+the appropriate Latex commands.  In the second case, a directly-readable
+character-string representation is written out.  Initially, the flag is
+true.
+
+\manentry{print\_library(first:tok, last:tok, file\_name: tok): void}
+Print the
+following components of the segment of the current library between
+objects first and last to the named file:
+\begin{enumerate}
+\item the name and status of
+every library object,
+\item the body of every DEF, ML, and EVAL object, and
+\item the extraction (if it currently exists) of any theorem whose name
+ends with an underscore.  
+\end{enumerate} 
+The tokens \tid{`first`} and \tid{`last`} may be given as
+the arguments \tid{first} and \tid{last} and are interpreted to refer to
+the first and last library objects, respectively.
+
+\manentry{mm: tactic}
+Print a proof to a file.  The next function works similarly to \tid{mm} but
+produces better looking output.
+\tid{mm} is the same as IDTAC
+except that as a side effect it prints out the nodes of its proof
+argument in the order visited by a depth first traversal of the proof
+tree.  The output is appended to whatever file snapshot output would go
+to.  Indenting is used to indicate depth, and redundant hypotheses are
+not displayed.  Vertical lines (or an approximation thereof) are printed
+to help the reader keep track of levels, and tick marks (hyphens,
+actually) are put on the lines to indicate the beginning of a conclusion
+of a proof node.  Given an arbitrary turnstyle (``\tid{>>}'') in the printout,
+to the right of it will appear the conclusion of a node of the proof
+tree.  Directly above will be a numbered list of the hypotheses of the
+proof node which are different from the hypotheses of the nodes parent
+node.  The parent is found by following upward the first vertical line
+to the left of the turnstyle.  Right after the conclusion of the node is
+the refinement rule, and below that, indented once from the turnstyle,
+are the children of the node.  ``INCOMPLETE'' in place of a rule indicates
+that no rule was applied there.
+
+\manentry{ppp: tactic}
+Pretty-print a Nuprl proof tree. 
+
+Print format for proof node is schematically as follows.
+\begin{verbatim}
+[...branches....]| 1. [id. (if not NIL)][...Hypothesis term.1........]
+[...branches....]|    [............Hypothesis term.1.................]
+       .                   .                             .
+       .                   .                             .
+[...branches....]|    [............Hypothesis term.1.................]
+       .                   .                             .
+       .                   .                             .
+       .                   .                             .
+[...branches....]| n. [id. (if not NIL)][...Hypothesis term.n........]
+[...branches....]|    [............Hypothesis term.n.................]
+       .                   .                             .
+       .                   .                             .
+[...branches....]|    [............Hypothesis term.n.................]
+[...branches....]|->> [............Conclusion term...................]
+[...branches....]?    [............Conclusion term...................]
+       .                   .                             .
+       .                   .                             .
+[...branches....]?    [............Conclusion term...................]
+[...branches....]? BY [............Refinement rule...................]
+[...branches....]? !  [............Refinement rule...................]
+       .                   .                             .
+       .                   .                             .
+[...branches....]? !  [............Refinement rule...................]
+[...branches....]? !  
+\end{verbatim}
+where
+\begin{enumerate}
+\item Branch at ?'s printed only if node is not last sibling.
+\item branch at !'s printed only if node has children.
+\item term and rule text is folded so as to always stay in the appropriate
+   region. 
+\item A hypothesis is only printed if it is textually different from the
+   same numbered hypothesis in the parent node.
+\item If a hypothesis is hidden, []'s are put around the hypothesis number.
+\item The root node does not have a branch entering the node.
+\end{enumerate}
+
+\manentry{(file\_name:tok): tactic} Set snapshot file to \tid{file\_name}
+then apply  \tid{ppp}.
+
+\manentry{set\_pp\_width(i:int): void} Set the number of columns to print
+the proof with (default 105).
+
+\manentry{complete\_nuprl\_path(directories: tok list; file\_name: tok):
+tok} Make a complete pathname from the current ``nuprl path prefix'',
+\tid{directories}, and \tid{file\_name}.  The result is formed by
+concatenating the path prefix, the strings in the list \tid{directories}
+and \tid{file\_name}, separating with the string ``\tid{/}'' (on Unix-like
+hosts).  The main use of this function is in the ``load-all'' files in the
+main library directory of Nuprl it provides a relatively host independent
+way to specify the loading of other ML files.  If Nuprl has been installed
+properly, then the default path prefix will be the root directory of Nuprl.
+
+\manentry{set\_nuprl\_path\_prefix(pathname: tok): void} Set Nuprl's
+path prefix.  
+
+\manentry{set\_snapshot\_file(file\_name:tok): void} Directs subsequent
+output of the snapshot feature (\PRINT) to the named file.
+
+
+
+
+\note{Mark and Copy}
+
+
+\section{Further Primitives for Terms and Proofs}
+
+Most of the ML functions in this section could have been implemented in ML.
+They are primitive either for efficiency reasons, or because a Lisp
+implementation (Lisp is the implementation language of both Nuprl and ML)
+already existed.  Many of the functions produce values that depend on the
+current state of Nuprl's library.
+
+\subsection*{For Terms}
+
+\manentry{map\_on\_subterms(f: term -> term; t: term): term}
+  Replace each immediate
+subterm of t by its value under f.
+
+\manentry{subterms(t: term): term list}
+  The immediate subterms of t.
+
+\manentry{free\_vars(t: term): term list}
+
+
+\manentry{remove\_illegal\_tags(t: term): term}
+  Remove all the tags from t that are
+illegal according to the tagging restrictions of the direct computation
+rules (see page 172 of the book).  The result depends on whether the new
+versions of the direct computation rules are in force (see above).
+
+\manentry{simplify(t:term): term}  Does the same thing as the simplification
+function used by arith.
+
+\manentry{substitute(t: term; subst: term\#term list): term}
+  If the first
+component of each pair in subst is a variable, then perform on t the
+indicated substitution.
+
+\manentry{replace(t: term; subst: term\#term list): term}
+  Like substitute, except
+that capture is not avoided.n
+
+\manentry{first\_order\_match(pattern: term; instance: term; vars: tok list):
+tok\#term list}
+  If the application succeeds, then the result is the most
+general first-order substitution s, for those variables in vars that are
+free in pattern, such that s applied to pattern is instance.
+
+\manentry{compare\_terms(t1: term, t1: term): bool}
+ True if term t1 is
+lexicographically less than term t2. False otherwise.  This is a total
+ordering of terms and is useful in normalizing expressions.
+
+\manentry{do\_computations(t: term): term}
+  From the bottom up, replaced each
+tagged term in t by the result of doing the computations indicated by
+the tag (see page 172 of the book).
+
+\manentry{compute(t: term): term}
+  Head reduce t as far as possible.
+
+\manentry{no\_extraction\_compute(t: term): term\#int}
+  Like compute, except that
+\tid{term\_of} terms are treated as constants, and the number of reductions
+done is also returned.
+
+\manentry{open\_eval(t: term; b: bool; thms: tok list): term}
+  Perform the evaluation
+defined in the description of the eval rules (see above).
+
+\manentry{eval\_term(t: term): term}
+  Apply Nuprl's evaluator to t.  The result is
+the same as would be obtained from entering eval mode (using the eval
+command) and entering t.
+
+\manentry{instantiate\_def(def\_name: tok; args: term list): term}
+  Use args as the
+actual arguments to an instance of the definition \tid{def\_name}.  This
+function operates by unparsing the arguments textually plugging them
+into a definition instance, and reparsing.  This is quite inefficient.
+
+\manentry{instantiate\_trivial\_def(def\_name: tok; arg: term): term}
+  The result is
+equal to arg, and is an instance of the ``trivial'' definition \tid{def\_name}.
+A trivial definition is one which has a single formal parameter that
+forms the entire right-hand-side of the template.  This function does
+not involving parsing.
+
+\manentry{add\_display\_form:(adder: term -> (tok \# (term list)); t: term):
+term}
+The operation of this function can be defined recursively.  Suppose the
+immediate subterms of t have been replaced by their results under
+\tid{(add\_display\_form adder)}, giving t'.  If adder fails on t', then return
+t'.  Otherwise, (adder t') is the pair (name,args).  Attempt to
+instantiate the definition named by name using args as the actual
+parameters.  If this succeeds with a result t''=t', then return t'',
+otherwise return t'.  The whole procedure involves only one parsing
+operation.
+
+\manentry{remove\_display\_forms(t: term): term}
+  Remove all the display forms
+(i.e., definition instances) from t.  The result is equal as a term to t
+but will be displayed by Nuprl as a term of the base type theory.
+
+
+\subsection*{For Proofs}
+
+\manentry{frontier: tactic}  For p a proof, fst (frontier p) is the proof list
+consisting of the unproved leaves of p.  
+
+\manentry{subproof\_of\_tactic\_rule(r: rule): proof}
+  The subproof built by the
+refinement tactic that is the body of the rule r.
+
+\manentry{hidden(p: proof): int list}
+  The numbers of the hidden hypotheses in the
+sequent at the root of p.
+
+\manentry{make\_sequent(dl:  declaration list, hidden: int list, concl:
+term): proof}
+  The first
+argument is the hypothesis list, the second is the list of hypotheses
+which are to be hidden, and the last is the conclusion.  The returned
+proof has incomplete status, of course.  The function fails if the the
+sequent could not ever appear in a Nuprl proof (e.g., if not all
+variables are declared).
+
+\manentry{equal\_sequents (p1: proof, p2: proof): bool}
+  Sequents are equal when
+the variables of corresponding declarations are identical, the terms of
+corresponding declarations are alpha-convertible, the same hypotheses
+are hidden, and the conclusions are alpha-convertible.
+
+\manentry{main\_goal\_of\_theorem(thm\_name: tok): term}
+
+
+\manentry{proof\_of\_theorem(thm\_name: tok): proof}
+
+
+\manentry{extracted\_term\_of\_theorem(thm\_name: tok): proof}
+
+
+
+\section{ML Primitives Related to the Library and State}
+
+\manentry{make\_eval\_binding(id: tok; t: term): term} 
+The result is
+the same (side effects on the eval environment included) as would be
+obtained by entering "let id = t;;" in eval mode.
+
+\manentry{execute\_command\_line(line:tok): void}
+  \tid{line} is a line of text that one
+could type to the command window to the {\tt P>} prompt.  The commands that
+can be used are:  load, dump, create, delete, jump, move, scroll, down,
+check, view, save, restore, kill, copystate and exit.
+
+\manentry{execute\_command(cmd: tok, args: tok list): void}
+  \tid{cmd} is the
+name of the command, and \tid{args} is its list of its arguments.
+
+\manentry{create\_def(name:tok, pos:tok, lhs:tok, rhs:term): void}
+  \tid{name} is
+the name of the def, \tid{pos} is the library position (exactly as one
+would type it to the command window), \tid{lhs} is the left-hand side of
+the definition (exactly as one would type it into an edit window), and
+\tid{rhs} is a term which is unparsed to yield the right-hand side of
+the definition.  The free variables of the term are turned into formal
+parameters (via the addition of angle brackets).  The function fails if
+the set of lhs formal parameters is not equal to the set of rhs formal
+parameters.  The generated rhs has outer parens and parens around all
+formals added.
+
+\manentry{kill\_extraction(name:tok): void}
+  Remove the extraction field from the
+theorem whose name is \tid{name}.
+
+\manentry{arity\_of\_def(def\_name: tok): int}
+  The number of formal parameters in
+the definition \tid{def\_name}.
+
+\manentry{formal\_list\_of\_def(def\_name: tok): tok list}
+  A list of the formal
+parameters (without angle-brackets) of the definition \tid{def\_name}.
+
+\manentry{rhs\_formal\_occurrences\_of\_def(def\_name: tok): tok list}
+  The list of
+formal parameters (without angle-brackets) that would be obtained if all
+text except formal parameters were removed from the right-hand-side of
+the definition \tid{def\_name}.
+
+\manentry{create\_theorem(name: tok; lib\_position: tok; p: proof): void}
+  A new
+theorem is created in the library with name name, library position given
+by \tid{lib\_position} (which should be in the same form as would be given to
+the create command), and whose main goal and proof are given by p.
+
+\manentry{create\_ml\_object(name: tok; lib\_position: tok; body: tok): void}
+
+
+\manentry{kill\_extraction(thm\_name: tok): void}
+
+
+\manentry{lib(prefix: tok): tok list}
+  A list of all names that have prefix as a
+prefix and that name an object in the current library.
+
+\manentry{library(():void): tok list}
+  A list of the names of all objects in the
+current library, in the same order.
+
+\manentry{object\_kind(object\_name: tok): tok}
+  One of ``DEF'', ``ML'', ``EVAL'', or ``THM''.
+
+\manentry{rename\_object(old\_name: tok; new\_name: tok): void}
+
+
+\manentry{object\_status(object\_name: tok): tok}
+  One of ``COMPLETE'', ``PARTIAL'', ``RAW'',
+or ``BAD''.
+
+\manentry{is\_lib\_member(object\_name: tok): bool}
+
+
+\manentry{restore\_library\_from\_state(state\_name: tok): void}
+  Replace the current
+library by a copy of the library contained in the named state.  No other
+components of the current state are modified.  (For a description of
+states, see the paragraph on the save and restore commands above.)
+
+\manentry{transform\_theorem(x:tok, p:proof): void}
+  The first argument is the name
+of a theorem, and the second is a proof which is to replace the current
+proof of the named theorem.  The new proof cannot have hypotheses, and
+its conclusion need not be the same as the current theorem's main goal.
+This function is useful in conjunction with tactics and the function
+\tid{proof\_of\_theorem}.
+
+\manentry{apply\_without\_display\_maintenance(f:*->**, a:*): **}
+  Apply a
+function to an argument while disabling the display-maintenance
+procedures.  Whenever a substitution into a term is done during the
+application, little effort will be made to compute a reasonable display
+form for the term.  This means that the term may have all occurrences of
+Nuprl definitions removed, leaving a term of the base type theory.
+Using this function can result in a ten-fold speedup for computations
+(such as symbolic computation) that do alot of substitution.
+
+\manentry{set\_display\_maintenance\_mode(on: bool): void}
+  Display-maintenance
+procedures become disabled if on is false, and enabled if on is true.
+
+\manentry{display\_message (message: tok): void}
+ Displays message in the
+command/status window.
+
+\manentry{set\_auto\_tactic(tactic\_name: tok): void}
+Set the auto-tactic to be the ML expression represented by \tid{tactic\_name}.
+
+\manentry{show\_auto\_tactic(): tok}
+The current setting of the auto-tactic.
+
+
+
+
+
+\section{Compatibility with Old Libraries}
+
+In order to allow old libraries to be loaded and viewed, it is possible
+to restore old versions of some of the rules that have been changed.
+The following ML functions can be used to toggle the rule versions used
+and to find out which version is in effect.  These functions should not
+be considered to be an "official" part of the system; they are provided
+only so that old libraries can be viewed.
+
+\manentry{make\_all\_tags\_legal(yes:bool): bool}
+  Make the direct computation rules
+ignore the tagging restrictions iff yes is true.  
+
+\manentry{all\_tags\_legal(foo:void): bool}
+  True iff the tags are ignored.
+
+\manentry{use\_old\_set\_rules(yes:bool): bool}
+  Use the old set rules iff yes is
+true.
+
+\manentry{old\_set\_rules\_in\_use(foo:void): bool}
+
+
+\manentry{reset\_rules(foo:void): void}
+  Reset the rules to their initial state
+(new set rules, all tags legal).
+
+
+
+
+
+
+\section{Loading and Compiling ML Code}
+
+
+Although Nuprl provides library objects for ML code, most users write
+their ML programs using a text editor of their choice and store them in
+regular files.  There are ML functions (which can be invoked in the
+command window in ML mode) that load and compile files of ML code.  The
+name of file containing ML code should end in the characters ``.ml''.
+
+There is not a tremendous difference in the performance of compiled versus
+uncompiled ML (although it is significant); the main advantage of compiling
+is that the ML files can subsequently loaded much more quickly (100
+times?).  Also, compiling an ML file is not too much slower than loading an
+uncompiled file; in fact, in some Lisps compiling is faster.  
+
+If you load a compiled ML file and get an error having to do with a symbol
+being unbound, it means that the compiled file was compiled in an
+environment which no longer exists.  This usually happens because a change
+is made to an ML file ({\tt load} always gets the newest version of an ML file,
+whether or not it is a binary) but a compiled file that depends on it is
+left unchanged.
+
+\smallskip
+
+\noindent{\tt load(file\_name: tok; types?: bool): void}.  Look for binary or ML
+versions of the file named \tid{file\_name}.  The ML version must exist.  If
+the ML version is the newest of the versions, load it; otherwise load the
+binary version.  The names for the versions are obtained by adding to
+file\_name the appropriate extension (e.g.  ``.ml'' for ML files).  If
+\tid{types?} is true, then after loading, a list of the names of all loaded
+functions, together with their types, is printed out.  Note: this printout
+can blow the control stack in some lisps (e.g. Lucid), possibly corrupting
+the state, if the printout is large.
+
+\smallskip
+
+\noindent{\tt compile(file\_name:tok; types?: bool): void}.
+Compile the ML version of
+\tid{file\_name}.  The compiled version is also loaded into the
+ML state.
+
+
+
+
+
+

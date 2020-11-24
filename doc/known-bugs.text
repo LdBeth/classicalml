@@ -1,0 +1,184 @@
+
+
+This file contains notes about bugs that have been discovered but not yet
+fixed.  Most of these bugs are unlikely to ever be fixed here at Cornell.
+However, fixes done by others will gladly be incorporated into our system. 
+                                                                             
+
+
+
+
+Text Editing (ted) Windows
+--------------------------
+
+Instantiate a definition in ted window, then edit (and check) the definition
+to reduce the number of formal parameters.  Trying to back up now over the
+instantiation using the left-arrow key will cause an error.  From the
+debugger, either (1) return from ted (c-N c-R on a Symbolics), or (2) abort,
+(reset-prl), then reinvoke Nuprl.  Once back in Nuprl, get the offending
+window up, position the cursor at the beginning of the offending def instance
+(without backing over it! -- use the mouse if necessary), and kill it (c-K).
+
+The ^W ("show parens") feature, described in the book, is no longer
+implemented.
+
+
+
+The Window System
+-----------------
+
+Left clicking on the library while a command is executing is a no-op.
+(Usually, the click will result in the name of the library-object under the
+mouse being inserted into the command window.)
+
+In the X-window version of Nuprl, some window managers ignore Nuprl's
+request for a minimum window size.  Nuprl breaks on windows with
+interior width or height less than one character.  If this happens you
+must abort and reset.
+
+In some versions of CLX the function to set the X-server's font path is
+broken.
+
+
+
+Rules
+-----
+
+The same error occurs in both the book's documentation and the implementation
+of the old rule for equality of set types (set rule number 10, p168).  The
+rule should be:
+
+H >> {x:A|B} = {y:A'|B'} in Ui by intro [new z]
+  >> A = A' in Ui
+  z:A >> B[z/x] in Ui
+  z:A >> B'[z/y] in Ui
+  z:A, B[z/x] >> B'[z/y]
+  z:A, B'[z/y] >> B[z/x]
+
+The erroneous version does not have the second and third subgoals, and in the
+last two subgoals the last hypotheses appear on the right of the ">>" (as the
+left parts of implications).  This would allow one to prove that {x:A|B} is
+U1 type, no matter what level B has; this is not true in the standard
+semantics.
+
+
+
+Libraries
+---------
+
+Not all of the dependency checking that was planned for has been implemented.
+In particular, theorem-theorem dependencies are not monitored.  When a proof
+of a theorem is constructed, there are no checks that references to other
+theorems via the "lemma" or "def" rules refer to theorems that occur earlier
+in the library.  Also, one can freely move theorems about in the library.  As
+a result, it is possible to construct invalid libraries where nevertheless
+all the objects are complete.  It is not only possible, but not unlikely when
+one changes the definitions of objects defined via extraction (i.e., using
+term_of) and then does not recheck affected theorems.  The "load fully"
+command permits complete verification of a library.
+
+
+
+ML
+--
+
+The "!!" component of the failure-trap-and-loop construct (page 31 of the LCF
+manual) appears to be busted.  In particular, the gcd example (page 24 of the
+LCF manual) does not typecheck.
+
+On a Sun, loading a "compile-all" file (such as the one in the lib/fta
+directory) can blow the control stack.  This has something to do with
+constructing the big string that contains all of the terminal output of the
+compile command.  At this point, compiling has finished, so if you know that
+it should succeed, you can just abort and forget about the problem.
+Otherwise, you will have to compile the files separately to see if everything
+compiled properly.  An analogous problem can occur with loading, if the basic
+loading procedure is "loadt" instead of "loadf" (which is less verbose).
+
+On a lisp machine, there is a horrendous package problem.  The problem
+concerns the package ML-RUNTIME (MLR for short), defined in
+nuprl:sys;nuprl-sys.  A hack that seems to fix the problem is the addition of
+the line (:colon-mode :internal) to the defpackage for ML-RUNTIME (this "fix"
+has been installed in Nuprl 3.0).  Without that line, the problem is as
+follows.  Starting with a fresh world, if you execute the defpackage
+manually, and then load the system as usual, none of the compiled ML files
+will load properly: the complaint will be about a non-existant external
+symbol "ml-runtime:...".  The problem is that lisp is trying to intern each
+name of an ML function as an atom prefixed by "MLR" and a single colon.  I
+haven't the slightest idea why, since these atoms started out internal to
+MLR.  Anyway, if you start a load of nuprl in a fresh world, the function
+that interns symbols like "mlr:foo" is simply "intern", but if the defpackage
+is evaluated outside of the first load, then the function is
+si:intern-external-only.  So another hack to fix the problem when it occurs
+is to evaluate
+(setf (si:pkg-prefix-intern-function (find-package 'ml-runtime)) 'intern)
+
+There is a problem with variable naming in the lisp translations of ML
+objects.  The ML translator uses, when possible, the same names for variables
+in the Lisp code as in the ML source.  These names are uninterned symbols in
+lisp.  Unfortunately, certain symbols cannot be treated as usual uninterned
+symbols.  For example, uninterned T is still recogized as T, and so it cannot
+be used as a variable.  Currently, there is a hack for T: it is translated to
+a name that is unlikely to ever appear in an ML program.  The atom NIL is not
+a problem since ML will not allow its use as a variable.  No other "special"
+symbols are currently accounted for, so problems may arise in the future.
+
+Parallel binding does not translate to Lisp properly.  For example, the ML
+form
+     let g x = let x = 2 and f x = 2 in f 2 
+translates to a Lisp form where the innermost "f" translates to a different
+name than the outermost "f", so that the Lisp compiler will complain about an
+undefined function.
+
+There is a problem with checking ML objects with more than one statement.
+When checking the object, ML is called to evaluate the contents of the
+object.  ML in turn calls the scanner, after the first statement is parsed
+it is executed.  It is possible that execution of this statement may cause
+the scanner to be called.  If this occurs the remainder of the ML object is
+lost.  One surprising way of invoking the scanner is to evaluate a term
+with display maintenance on (see nuprl/doc/changes.text).  To circumvent
+this problem in this case, display maintenance is turned off prior to
+invoking ML with the contents of an ML object.  Thus, theorems which are
+expanded as a result of checking an ML object will be expanded without
+display maintenance.
+
+
+Parsing
+-------
+
+Spurious parentheses within the right hand sides of definitions can cause
+errors.  For example, one user, in following the example given in the Nuprl
+book in section 3.6, entered the following defs for "vel" and "mat".
+
+<p:prop> vel <q:prop>==([~([[~<p>] & [~<q>]]]) 
+<p:prop> imp <q:prop>==([[~<p>] vel <q>]) 
+
+Parsing the def instance "1 imp 2" gives an error.  Notice the extra left
+parenthesis in the first def.
+
+When parsing a piece of text, if getting the initial character requires
+the expansion of a definition which is bad or missing, prl will raise an
+exception that will not be caught, causing a Lisp error.
+
+
+
+Refinement
+----------
+
+The transformation tactic mechanism uses term-equality as the basis for
+comparing the root of the returned sequent with the sequent where the
+returned proof is to be grafted in.  Thus, for example, one can save the
+proof of a theorem, change the top level goal by renaming some bound
+variables, then use the transformation tactic mechanism to restore the
+saved proof.  However, the rules used in the proof may make explicit
+reference to variables whose names are derived from the variables in the
+top goal, and so the refinements might be no longer valid.
+
+
+
+Miscellaneous
+-------------
+
+On the lisp machine, the reinitialization of the readtable done by the
+initializations file does not affect the readtable used by the compiler or
+lisp-loader, which may continue to have the character ^ as a reader-macro.

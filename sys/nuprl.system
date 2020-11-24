@@ -1,0 +1,3 @@
+(fs:make-logical-pathname-host "nuprl")
+
+(si:set-system-source-file "nuprl" "nuprl:sys;defsystem.lisp")

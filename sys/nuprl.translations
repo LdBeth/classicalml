@@ -1,0 +1,11 @@
+;;; -*- Mode: LISP; Package: FILE-SYSTEM; Syntax: Zetalisp; Base: 10. -*-
+
+(set-logical-pathname-host
+       "nuprl"
+       :physical-host "pots"			;replace pots
+       :translations
+       '(("sys;**;" ">nuprl>sys>**>")		;(maybe) replace nuprl
+	 ("ml;**;" ">nuprl>ml>**>")		; etc.
+	 ("lib;**;" ">nuprl>lib>**>")
+	 ("doc;**;" ">nuprl>doc>**>")))
+

@@ -1,0 +1,379 @@
+\chapter{Introduction}
+
+This document is a reference manual for the version of \Nuprl{}
+that runs on Unix/X-window platforms.  Nuprl will also run on 
+Symbolics Lisp machines and on Sun workstations running the SunView
+window system, although these versions of Nuprl are now considered
+obsolete; see the files {\tt doc/symbolics} or {\tt doc/sunview} for
+further information on these versions.
+
+In addition to the system proper, this manual also documents the
+tactic collection which is loaded into Nuprl by default.  This
+documentation is somewhat sketchy.  Also, many of the mathematics
+libraries built at Cornell using Nuprl have used tactic collections
+different from the one described here.  The chapter on the tactic
+collection also gives some examples of their use.
+
+It is assumed that the reader is familiar with Nuprl at the level of
+the ``tutorial'' chapters of the book {\em Implementing Mathematics
+with the Nuprl Proof Development System}, Constable {\em et al} ---
+henceforth referred to as ``the book''.  The tutorial part of the book
+introduces the system and its type theory and provides a number of
+examples.  The ``reference'' portion, excluding the parts of Chapter 8
+on the type system and its semantics, is superseded by this reference
+manual.  Chapter 9 in the reference portion also contains some useful
+examples and discussions of tactic writing that are not reproduced
+here.  The ``advanced'' portion of the book deals with application
+methodology, gives some extended examples of mathematics formalized
+in Nuprl, and also describes some extensions to the type theory which
+have not been implemented.
+
+This manual assumes that Nuprl will be running on a machine that has a
+three-button mouse.  However, except for a few inessential
+user-interface features, anything that can be done with the mouse can
+be done by other (although possibly less convenient) means.
+
+\section{System Overview}
+
+\label{Overview}
+
+One interacts with Nuprl using a collection of windows.  These windows are
+at the ``top-level'' in the X environment, so they can be managed
+(positioned, sized, etc.) in the same way as other top-level applications
+such as X-terminals.  Consult your local documentation for details on
+general window management.  Creation and destruction of Nuprl windows, and
+manipulation of window contents, is done solely via commands interpreted by
+Nuprl.  Nuprl will receive mouse clicks and keyboard strokes whenever the
+the input focus is on any of its windows.  Exactly one window is
+``active'' at any given time; this window is identified by the presence of
+Nuprl's cursor which appears as a small solid black rectangle.  The
+specific location of the cursor determines the semantics of keyboard
+strokes and mouse clicks, and is independent of the location of the mouse.
+
+When Nuprl is first invoked it will automatically create two windows, one
+called the {\em command window} and the other the {\em library} window.  These
+two windows remain throughout the session and new ones cannot be created.
+The command window, when active, accepts lines of text terminated by a
+carriage return.  The effect of entering a line of text depends on the
+{\em mode} of the command window.  The mode is indicated by the prompt
+printed in the window at the beginning of the current line.  There are five
+modes (details are given below): {\em command mode} (prompt {\tt P>}) for
+entering basic commands, {\em ML mode} for entering ML expressions to be
+evaluated, {\em eval mode} for entering expressions to be evaluated as type
+theory programs or as bindings of programs to identifiers, {\em Lisp mode} for
+entering Lisp expressions to be evaluated, and {\em instantiation mode} for
+entering names of definitions to be instantiated.
+
+The library window displays the current contents of Nuprl's library.  The
+library is a list of named objects.  An object is either a definition, a
+theorem together with its proof, or a text object containing either ML code
+or expressions appropriate for eval mode.
+
+There are two other kinds of windows.  Both are for editing objects in the
+library.  Such windows can be created using commands entered in the command
+window.  One kind of editing window is for text editing.  These windows are
+used for editing definitions, goals of theorems, and rules
+applied in proofs.  The other kind of window is a {\em refinement-editor}
+window, which is used to view and manipulate proofs as tree-structured
+objects.
+
+Proofs are trees whose nodes consist of sequents and justifications.  A
+justification is either the name of a rule, {\em empty}, or {\em bad}
+(ill-formed or inapplicable).  Rules are either {\em primitive} rules,
+which are rules directly related to the type theory, or the {\em tactic}
+rule, which consists of the text of an ML program called a {\em tactic}.
+Proofs are built and modified by textually editing justifications and by
+applying {\em transformation tactics}.
+
+\section{Summary of Changes}
+
+With the exception of the addition of a tactic collection, the changes
+that have been made to Nuprl since the book was written have been
+relatively minor.  The main change was the addition of an interface to
+X-windows.  There were also changes and additions to the rules,
+addition of several user interface features, and implementation of a
+substantial set of new ML ``utilities''.  The changes to the set of
+rules are as follows.
+\begin{itemize}
+\item Modification of the  {\em direct-computation}, {\em
+extensionality}, {\em set} and {\em arith} rules.
+\item Addition of ``reduce'' rules for decision terms (\tid{atom\_eq}
+etc). 
+\item Addition of the {\em monotonicity}, {\em division}, {\em
+thinning}, {\em eval} and {\em reverse-direct-computation} rules.
+\item ``Experimental'' addition of ``simple'' recursive types and 
+the ``object'' type (see Appendix~\ref{experimental-types}).
+\end{itemize}
+Some of the changes to the user interface are:
+\begin{itemize}
+\item additional bindings of keys to special functions,
+\item ability to use ``special'' characters such as $\forall$ in
+definitions,
+\item new features involving the mouse, and
+\item some new commands.
+\end{itemize}
+The most significant new ML utilities deal with printing out proofs
+and libraries.  These can be printed out in a reasonably readable
+textual format, or as a source file for Latex.
+
+
+\section{Learning to Use Nuprl}
+
+One way to get started learning how to use the Nuprl system is to try
+some of the examples in Chapters 3 and 4 of the book.  These examples
+give a tutorial-like introduction to basic commands for editing text
+and proofs.  Before doing this, though, Section~\ref{Keys} below on
+special keys and mouse-clicks should be read.
+
+Many of the examples in Chapters 3 and 4 have been worked out and
+stored in the library {\tt lib/basics/lib}.  In particular, the
+library contains basic definitions for logical notions and proofs of a
+few simple logical facts and of the existence of integer square roots.
+The library makes use of one of the special fonts distributed with
+Nuprl.  If these fonts have not been installed at your site, you can
+use the library ``ulib'' in place of ``lib'' above (the ``u'' is for
+``ugly'', since the library replaces, for example, the symbol for the
+universal quantifier by the string ``All'').
+
+To load this library, one can type
+\begin{center}
+ \tt load fully top from lib/basics/lib
+\end{center}
+(followed by a carriage return) in the command window.  In English, 
+this command means: {\em load the library objects from the file
+lib/basics/lib into the current library starting at the top, fully
+reconstructing all proofs}.
+
+
+\section{Interactions with Lisp}
+
+Nuprl is a Lisp program, and a few Nuprl-related operations, in
+particular starting Nuprl, must be done in Lisp.  This section
+describes all such operations.
+
+The following assumes that Nuprl has been correctly installed and also that
+a Lisp image containing Nuprl has been created.  If a special Lisp image
+has not been created, then you will need to follow the instructions on
+loading Nuprl into Lisp in the document \tid{doc/installing-nuprl}.  Once
+the Lisp image containing Nuprl is running, subsequent input will be
+interpreted as Lisp expressions to be evaluated.  To start Nuprl, evaluate
+\begin{quote}
+  \tt (nuprl "{\em host}")
+\end{quote}
+where {\em host} is the name of the machine where  Nuprl's
+windows are to appear.  
+The evaluation of this function terminates when the
+Nuprl session is exited.   
+
+If there is a file named {\tt nuprl-init.lisp}\footnote{The filename
+extension for lisp source files, {\tt lisp} in this case, depends on the
+Common Lisp and kind of machine being used.} in your home directory and if
+Nuprl has not been started since it was loaded or since the last time it
+was reset (see below), then starting it will cause the file to be
+immediately loaded.  This allows various window-system customizations to be
+done.  The file \tid{sys/sample-nuprl-init-for-X}'' gives an example of some
+useful customizations for X-windows.  Details on possible customizations
+are given below.
+
+Nuprl runs in the ``nuprl'' package.  All symbols entered in Lisp will
+be interpreted relative to this package.  The package contains all the
+symbols of Common Lisp, but does {\em not} contain the various
+implementation-specific utilities found in the package ``user'' (or
+``common-lisp-user'').  To refer to these other symbols, either change
+packages using {\tt (in-package "USER")}, or explicitly qualify the
+symbols with a package prefix.  For example, to use the Lucid (Sun)
+Common Lisp function \tid{quit} to quit lisp, evaluate {\tt
+(user::quit)}.  (Note the double-colon.)  If you change packages, you
+can change back to the Nuprl package using {\tt (in-package "NUPRL")}.
+
+
+Most Lisps allow computations to be interrupted.  This is usually done by
+entering \CTRL{C} (that is, control-C) in the Lisp window.  This will cause
+Lisp to enter its debugger, from which the computation can be resumed or
+aborted (in Lucid, \tid{:a} aborts and \tid{:c} resumes).  Aborting Nuprl
+is almost always safe.  When Nuprl is restarted, the state should be
+exactly as it was when Nuprl was killed, except that any computations
+within Nuprl will have been aborted.  To restart Nuprl it is sufficient to 
+evaluate \tid{(nuprl)}.
+
+It is possible (though not too likely) for Nuprl to get an error which
+will cause the Lisp debugger to be entered.  This will likely be due
+to a user improperly setting an X-window parameter using the
+customization facility described below.  If this happens, the mistake
+must be fixed and Nuprl reinvoked.
+
+On rare occasions Nuprl's window system may get an error from which it is
+impossible to recover by just aborting and reinvoking.  In this case, abort
+out of Nuprl, and enter the Lisp form {\tt (reset)}.  This should fix the
+problem.  It will cause Nuprl's window system to be reinitialized, but
+otherwise the state will be left intact.
+
+For those unfamiliar with Lisp-based systems, if the system appears to be
+inexplicably stuck, check the window running Lisp to see if Lisp is
+garbage-collecting.
+
+
+
+\section{Customizing Nuprl}
+
+The Lisp function \tid{change-options} can be used to set various
+parameters affecting Nuprl's window system.  An appropriate place to call
+this function is from your init file.  The default values are reasonable,
+so you need not have an init file.
+
+The \tid{change-options} function takes an argument list consisting of
+keywords and associated values.  For example, to set the options :host and
+:font-name to ``moose'' and ``fg-13'' respectively, put the form
+\begin{quote}
+\tt  (change-options :host "moose" :font-name "fg-13")
+\end{quote}
+in your init file.  The options, together with their default
+values (in parentheses) are given below.
+\begin{quote}
+{\tt{}:host} ({\tt{}NIL}).  The host where Nuprl windows should appear.  
+
+{\tt{}:title-bars?} ({\tt{}NIL}).  If {\tt{}T}
+then Nuprl will draw its own title bars.
+
+{\tt{}:host-name-in-title-bars?} ({\tt{}T}).  
+If {\tt{}T}, then the title of each window will
+include a substring indicating what host the Lisp process is running on.
+
+{\tt{}:no-warp?} ({\tt{}T}).  If {\tt{}T} then Nuprl will never
+warp the mouse.  (Mouse
+warps apparently annoy some users.)  In environments where the position of
+the mouse determines input focus, setting this option to \tid{NIL} will
+guarantee that Nuprl retains input focus when windows are closed.
+
+{\tt{}:frame-left} ({\tt{}30}), {\tt{}:frame-right} ({\tt{}98}), 
+{\tt{}:frame-top} ({\tt{}30}), {\tt{}:frame-bottom}
+({\tt{}98}).  Each of these should be a number between 0 and 100.  They give
+the boundaries, in terms of percentage of screen width or height, of an
+imaginary frame within which Nuprl will attempt to place most new windows.
+
+{\tt{}:font-name} ({\tt{}"fixed"}).  The name (a string) of a font to use
+for the characters in Nuprl windows.  The font must be fixed-width.  The
+default is reasonable and should always be available, but it does not
+contain the special characters used in many of the libraries built at
+Cornell.  These libraries will have appearance problems with wimpy fonts,
+although they should be correct.  Some of the better fonts are as follows.
+fg-25, fg-30, fgb-25, fg-40: these have all the special characters except
+centre-dot.  fg-13, fg-20, fgb-13, fr-25: all except integral, gamma,
+delta, plus-minus, and circle-plus.  These fonts are not supplied in recent
+releases of the X-window system, but they are included in the Nuprl
+distribution.  To use these fonts they must have been installed correctly
+and the X-server must be made aware of them --- see the file
+\tid{doc/installation} for details on how to do this.
+
+{\tt{}:cursor-font-name} ({\tt{}"cursor"}), {\tt{}:cursor-font-index}
+({\tt{}22}).  The name of the font to use for the mouse cursor when it is
+over a Nuprl window, and an index into that font.  The default font should
+always be available.
+
+{\tt{}:background-color} ({\tt{}"white"}).  The color for the
+background in Nuprl windows.  The value must be a string argument
+naming a color.  Any color in the X-server's default colormap may be
+used.  Nuprl will get a Lisp error (entering the Lisp debugger) if the
+color does not exist.
+
+{\tt{}:foreground-color} ({\tt{}"black"}).  The color for characters 
+etc.\ in Nuprl windows.
+
+  
+\end{quote}
+
+
+\section{Mouse Buttons and Special Keys}
+
+\label{Keys}
+
+Some of the keys on the keyboard are bound to special functions.  Many of
+these keys will be referred to symbolically.  This section describes the
+correspondence between the symbolic names and actual keys.  In order to
+accommodate a variety of preferences, many of the names correspond to
+several keys.
+
+Following are some of the key bindings, together with a brief description
+(see below for details).
+\begin{quote}\protect
+
+\COPY{} = \CTRL{C}.  Copy text from buffer.
+
+\INS{} = \CTRL{I}.  Instantiate a definition.
+
+\KILL{} = \CTRL{K}.  Kill a character, definition or selected region.
+
+\EXIT{} = \CTRL{D}.  Exit a window or ML or Eval mode.
+
+\DEL{} = Rubout.     Delete the preceding character.
+
+\ERASE{} = \CTRL{U}.  Erase the current input line (command window only).
+
+\MODE{} = \CTRL{M}.  Toggle ``bracket mode''.
+
+\TRANSFORM{} = \CTRL{T}.  Run a transformation tactic.
+
+\PRINT{} = \CTRL{O}.  Output the contents of
+the active window to a file.  
+
+\CMD{} = Tab.    Make the command window active.
+
+\CR{} = Return.  Carriage return.
+\end{quote}
+
+The rest of the special keys are organized as a keypad with the 
+following layout
+\begin{center}
+\begin{tabular}{|c|c|c|} \hline
+\DIAG & \UP & \JUMP \\ \hline
+\LEFT & \LONG & \RIGHT \\ \hline
+\SEL & \DOWN & \\ \hline
+\end{tabular}
+\end{center}
+These keys are used to move Nuprl's cursor around and to select text.
+Almost everything that can be done with these keys can also be done using
+the mouse.  On  machines with ``meta'' keys,
+symbolic keys are mapped to two simulated keypads: when the ``meta'' key is
+held down, the leftmost block of 9 keys (q-w-e-a-s-d-z-x-c) and the
+rightmost block (u-i-o-j-k-l-m-,-.)  are both interpreted as keypads.
+
+As an alternative to the keypad there is a set of Emacs-like bindings that
+do not involve the ``meta'' key.  These are given below, along with a
+short description of their main function.  
+\begin{quote}\protect
+\SEL\ = \CTRL{S}.  Select (a template, an endpoint of a piece of text, \ldots).
+
+\DOWN\ = \CTRL{N}.  Move the cursor down (``next'').
+
+\LEFT\ = \CTRL{B}.  Move the cursor left (``back'').
+
+\LONG\ = \CTRL{L}.  Amplify the next cursor movement.
+
+\RIGHT\ = \CTRL{F}.  Move the cursor right (``forward'').
+
+\DIAG\ = \CTRL{Q}.  Move ``diagonally'' up a proof tree.
+
+\UP\ = \CTRL{P}.  Move the cursor up (``previous'').
+
+\JUMP\ = \CTRL{J}.  ``Jump'' to another window.
+\end{quote}
+
+By holding down both the ``control'' and ``meta'' keys one can obtain some
+special printing characters (such as some of the Greek letters), if they
+are available in the current font.  These characters should only be used on
+the left hand sides of the templates in Nuprl definitions.  To see a list
+of these key bindings, right-click the mouse, and a list of them will
+appear in the command window.  If your machine does not have a meta key
+then you cannot use special characters.
+
+Additional key bindings can be defined in your init file by using the
+function define-key-binding.  This requires a bit of knowledge about how
+Nuprl deals with characters internally.  See the file
+doc/implementation-notes for more details on this.
+
+Slight variants of the functions of the keys \SEL\ and \JUMP\ are bound to
+the left and middle mouse buttons, respectively.  Henceforth, these buttons
+will be referred to as mouse-\SEL\ and mouse-\JUMP.  See below for more on
+the use of these buttons.
+
+

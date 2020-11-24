@@ -1,0 +1,24 @@
+#!/bin/csh
+#
+#   mv+ pattern1 pattern2 file1 [ file2 ...  ]
+#
+#   rename files by replacing the last pattern1 with pattern2
+
+set noglob
+
+set x = $1	# what it was
+shift
+set y = $1	# what it shall be
+shift
+
+foreach f ( $* )
+    if ( `expr match $f '.*'$x'.*'` ) then      
+	set a = `expr match $f '\(.*\)'$x'.*'`
+	set b = `expr match $f '.*'$x'\(.*\)'`
+	echo mv $f $a$y$b
+	mv $f $a$y$b
+    else
+	echo $f not moved.
+    endif
+end
+echo finished.

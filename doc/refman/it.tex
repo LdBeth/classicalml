@@ -1,0 +1,50 @@
+% Document Type: LaTeX
+% Master File: it.tex
+\documentstyle[12pt]{report}
+
+\marginparwidth 0pt
+\oddsidemargin  0pt
+\evensidemargin  0pt
+\marginparsep 0pt
+
+\topmargin   0pt
+
+\textwidth   6.5in
+\textheight  8.5 in
+
+%\newcommand{\Cornell}[1]{{\bf [Cornell users:} #1{\bf{}]}}
+
+\newcommand{\Cornell}[1]{}
+
+\newcommand{\Nuprl}{Nuprl}
+
+\input{macro}
+
+\title{The Nuprl Proof Development System, Version 3.2 \\
+Reference Manual and User's Guide}
+
+\author{The Nuprl Group}
+
+\begin{document}
+  
+\maketitle
+
+\tableofcontents
+
+\include{intro}
+\include{command}
+\include{library}
+\include{red}
+\include{defs}
+\include{ted}
+\include{terms}
+\include{rule}
+\include{ML}
+\include{tactics}
+
+\appendix
+
+\include{MLcons}
+\include{newtypes}
+
+\end{document}

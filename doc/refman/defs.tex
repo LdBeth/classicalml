@@ -1,0 +1,143 @@
+\chapter{Definitions and Definition Objects}
+
+In{} Nuprl text is used to represent proof rules, theorem goals and
+and ML tactic bodies.
+This text is made up of characters and calls to text macros.
+Since internally pieces of text are stored as trees of characters and
+macro references, they are also called {\em text{} trees}
+or {\em T-trees}{}.
+
+Text macros{} are used mainly to improve the readability of terms and
+formulas.
+For example, since there is no $\geq$ relation built into \prl{},
+a formula like \(x \geq y\) might be represented by {\tt (($x$<$y$) -> void)}.
+Instead of always doing this translation one may define
+\begin{verbatim}
+        <x>>=<y>==((<x><<y>) -> void)
+\end{verbatim}
+and then use {\tt x>=y} instead of {\tt ((x<y) -> void)}.
+(Note that for the definition  to be used it must be {\em instantiated} 
+(see section 4 above) --- one cannot just type ``{\tt x>=y}''.)
+Since most macros are used to extend
+the notation available for terms and formulas, they are also known as
+{\em definitions}
+and the library objects that contain them are called
+{\em definition objects}.
+
+The left-hand side of a definition specifies its formal parameters and also
+shows how to display a call to it.
+The right-hand side shows what the definition stands for.
+In the example above the two formal parameters are {\tt <x>} and {\tt <y>}.
+(Formal parameters are always specified between angle brackets.)
+
+The left-hand side of definitions should contain zero or more formal
+parameters plus whatever other characters one wants displayed.
+For instance,
+\begin{verbatim}
+        <x> greater than or equal to <y>
+        (ge <x> <y>)
+        <x>>=<y>
+\end{verbatim}
+are all perfectly valid left-hand sides.
+A formal parameter is an {\it identifier} enclosed in angle brackets
+or an \({\it identifier}{\tt :}{\it description}\)
+enclosed in angle brackets, where a {\it description} is a piece of
+text that does not include an unescaped {\tt >}.
+(The escape mechanism is explained below.)
+After the definition object has been checked the description is used to help
+display the object in the library window, as \({\tt <}{\it description}{\tt >}\)
+is inserted in place of the formal parameter.
+For example, given the following definition of {\tt GE},
+\begin{verbatim}
+        <x:int1>>=<y:int2>==((<x><<y>) -> void)
+\end{verbatim}
+the library window would show the following:
+\begin{center}
+\begin{tabular}{|l|}\hline
+\verb`Library` \\ \hline
+\verb`* GE  `\\
+\verb`  DEF: <int1>>=<int2>`\\
+\nothing\\ \hline  
+\end{tabular}
+\end{center}
+If the description is omitted or void, the empty string is used, so that
+formal parameter is displayed as ``{\tt <>}''.
+
+Sometimes one wishes to use {\tt <} and {\tt >} as something other than angle
+brackets on the left-hand side of definitions.
+Backslash is used to suppress the normal meanings of {\tt <} and {\tt >}.
+To keep a {\tt <} from being part of a formal parameter or to make a {\tt >}
+part of a description, precede it with a backslash, as in
+\begin{verbatim}
+        <x>\<=<y>==((<y><<x>) -> void)
+\end{verbatim}
+and
+\begin{verbatim}
+        square root(<x: any int\>0 >)== ... .
+\end{verbatim}
+
+\noindent
+To get a backslash{} on the left-hand side, escape it with another backslash:
+\begin{verbatim}
+        <x>\\<y>== ... .
+\end{verbatim}
+
+The right-hand side of a definition shows what the definition stands for.
+Besides arbitrary characters it can contain formal references to the parameters
+(identifiers enclosed in angle brackets) and uses of checked definitions.
+(Note: definitions may not refer to each other recursively.)
+Every formal reference must be to a parameter defined on the left-hand side;
+no nonlocal references are allowed.
+
+Here is an example of a definition that uses another definition:
+\begin{verbatim}
+        <x>>=<y>>=<z>==<x>>=<y> & <y>>=<z>.
+\end{verbatim}
+An example of a use of this definition is {\tt 3>=2>=1}, which expands ultimately
+into {\tt ((3<2) -> void) \& ((2<1) -> void)}.
+Blanks are {\em very} significant on the right-hand sides of definitions;
+the three characters {\tt <x>} are considered to be a formal reference,
+but the four characters {\tt <x >} are not.
+
+Extra backslashes on the right-hand side do not affect parsing, although
+they do affect the readability of the generated text.
+For example, the (unnecessary) backslash in
+\begin{verbatim}
+        <x>>=<y>==((<x>\<<y>) -> void)
+\end{verbatim}
+is displayed whenever the generated text is displayed.
+For better readability it is best to avoid backslashes on the right-hand
+side whenever possible.
+
+The routine that parses the right-hand side of definitions does backtracking to
+reduce the number of backslashes needed on right-hand sides.
+The only time a backslash is absolutely required is when there is a {\tt <}
+followed by what looks like an identifier followed by a {\tt >},
+all with no intervening spaces.
+For example, the right-hand side below requires its backslash, since
+{\tt <x>} looks like a parameter reference:
+\begin{verbatim}
+        ... == <f1>, 0\<x>> <f2>.
+\end{verbatim}
+If the definition were rewritten as
+\begin{verbatim}
+        ... == <f1>, 0<x >> <f2>
+\end{verbatim}
+then it would no longer need a backslash.
+
+Notice that the right-hand side does not have to refer to all of the formal
+parameters and
+can even be empty, as in the ``comment'' definition.
+\begin{verbatim}
+        (* <string:comment> *)== .
+\end{verbatim}
+A use of such a definition might be the following.
+\begin{center}
+\begin{tabular}{|l|}\hline
+\verb`EDIT main goal of thm`  \\ \hline
+\verb`>> x:int # ( ... )      (* This text is ignored *)`\\
+\nothing\\ \hline  
+\end{tabular}
+\end{center}
+
+
