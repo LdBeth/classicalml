@@ -291,19 +291,6 @@
   #+ccl (ccl:getenv str)
   #+allegro (system:getenv str))
 
-;;; may return NIL
-(defun local-host ()
-  (unix-environment-variable "HOST"))
-
-;;; may return NIL.  A flaky function.  Use at your own risk.
-(defun X-host ()
-  (let ((display (unix-environment-variable "DISPLAY")))
-    (when display
-      (let ((str (string-right-trim '(#\0 #\. #\:) display)))
-	(if (or (string-equal str "unix") (string-equal str ""))
-	    (unix-environment-variable "HOST")
-	    str)))))
-
 (defconstant *herald-format-string*
 "~%
 
@@ -339,45 +326,3 @@ retained.~4%")
     (format t *herald-format-string*))
   #-symbolics
   (format t *herald-format-string*))
-
-
-;;; Extend the X-server's font path with the directory formed by 
-;;; concatenating Nuprl's path prefix, "sys/x-fonts" and the
-;;; subdirectory argument.  Lucid and Allegro 
-;;; only.  Use only in nuprl-init files.
-(defun add-nuprl-font-directory (subdirectory)
-  #-(or lucid allegro kcl)
-  (error "Error in setting font path: not implemented for this Common Lisp")
-  (unless (get-option :host)
-     (error "Error in setting font path: the :host option is not set."))
-  (add-nuprl-font-directory$
-   (concatenate 'string *nuprl-path-prefix* "sys/x-fonts/" subdirectory)))
-
-(defun add-nuprl-font-directory$ (path)
-  (let* ((display (concatenate 'string (get-option :host) ":0.0")))
-    #+kcl
-    (progn (system (concatenate 'string "xset fp+ " path " -display " display))
-	   (system (concatenate 'string "xset fp rehash -display " display)))
-    #+lucid
-    (progn (user::run-program 
-	    "xset" 
-	    :arguments `("fp+" ,path "-display" ,display))
-	   (user::run-program
-	    "xset" 
-	    :arguments `("fp" "rehash" "-display" ,display)))
-    #+ccl
-    (progn (ccl:run-program
-            "xset"
-            `("fp+" ,path "-display" ,display))
-           (ccl:run-program
-            "xset" 
-            `("fp" "rehash" "-display" ,display)))
-    #+allegro
-    (progn (excl:run-shell-command
-	    (concatenate 'string "xset fp+ " path " -display " display))
-	   (excl:run-shell-command
-	    (concatenate 'string "xset fp rehash -display " display))))
-  nil)
-
-
-

@@ -17,8 +17,8 @@ To use it, you need an ANSI complaint CL with ASDF.
 ## start the system
 
 ```
-CL-USER> (load "sys/nuprl.asd")
-CL-USER> (asdf:load-system "nuprl")
+CL-USER> (load "sys/classical-ml.asd")
+CL-USER> (asdf:load-system "classical-ml")
 ;; now the base system has been loaded
 CL-USER> (in-package "NUPRL")
 NUPRL> (setup)

@@ -1,9 +1,8 @@
 (in-package #:asdf)
 
-(defsystem nuprl
-  :name "NuPRL"
+(defsystem classical-ml
+  :name "Classical ML"
   :version "3.2.0"
-  :depends-on ("clx")
   :serial t
   :components
   ((:file "package")

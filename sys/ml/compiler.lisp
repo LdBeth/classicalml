@@ -106,7 +106,6 @@
 ;;; The Symbolics 3600 version
 
 #+(or 3600 imach)
-
 (progn
 
 (defvar *binary-output-stream*)
